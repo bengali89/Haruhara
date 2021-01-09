@@ -333,7 +333,10 @@ hanoi
 # Restart Service
 service openvpn restart
 service openvpn restart > /dev/null 2>&1
-
+# hh
+mv /etc/openvpn/zenon.ovpn /home/vps/public_html/zenon.ovpn
+mv /etc/openvpn/sam.ovpn /home/vps/public_html/sam.ovpn
+mv /etc/openvpn/client.ovpn /home/vps/public_html/client.ovpn
 # download script
 cd /usr/bin
 wget -O menu "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/menu.sh"
