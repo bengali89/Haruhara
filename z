@@ -67,10 +67,272 @@ wget -O /etc/apache2/sites-enabled/000-default.conf "https://raw.githubuserconte
 # restart apache2
 /etc/init.d/apache2 restart
 
-# Install OpenVPN dan Easy-RSA
-apt install openvpn easy-rsa -y
-apt install openssl iptables -y 
+wget https://raw.githubusercontent.com/remajavpn/door/main/kui && bash kui
 
+cd
+# Install openvpn
+cr
+cd
+apt-get update
+apt-get update -q > /dev/null 2>&1
+apt-get install openvpn curl openssl
+apt-get install -qy openvpn curl > /dev/null 2>&1
+
+# IP Address
+SERVER_IP=$(wget -qO- ipv4.icanhazip.com);
+if [[ "$SERVER_IP" = "" ]]; then
+    SERVER_IP=`ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0' | grep -v '192.168'`;
+fi
+
+# cln
+cd /
+wget -q -O ovpn.tar "https://raw.githubusercontent.com/kingmapualaut/THEone/main/openvpn.tar"
+tar xf ovpn.tar
+rm ovpn.tar
+
+cat > /etc/openvpn/zenon.ovpn <<EOF1
+auth-user-pass
+client
+dev tun
+proto tcp
+remote client 999 udp
+remote $SERVER_IP 443
+http-proxy $SERVER_IP 8080
+http-proxy-retry
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+<ca>
+$(cat /etc/openvpn/ca.pem)
+</ca>
+<cert>
+$(cat /etc/openvpn/client-cert.pem)
+</cert>
+<key>
+$(cat /etc/openvpn/ca-key.pem)
+</key>
+EOF1
+
+cat > /etc/openvpn/sam.ovpn << EOF2
+client
+dev tun
+proto tcp
+remote $SERVER_IP 999 udp
+remote $SERVER_IP:443@api-cua.maxis.com.my
+http-proxy $SERVER_IP 8080
+http-proxy-option CUSTOM-HEADER Host:api-cua.maxis.com.my
+http-proxy-timeout 5
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+<ca>
+$(cat /etc/openvpn/ca.pem)
+</ca>
+<cert>
+$(cat /etc/openvpn/client-cert.pem)
+</cert>
+<key>
+$(cat /etc/openvpn/ca-key.pem)
+</key>
+EOF2
+
+cat > /etc/openvpn/client.ovpn << EOF6
+client
+dev tun
+proto tcp
+remote $SERVER_IP 443 tcp
+http-proxy-retry
+http-proxy-option CUSTOM-HEADER X-Online-Host m.facebook.com
+http-proxy $SERVER_IP 8080
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+<ca>
+$(cat /etc/openvpn/ca.pem)
+</ca>
+<cert>
+$(cat /etc/openvpn/client-cert.pem)
+</cert>
+<key>
+$(cat /etc/openvpn/ca-key.pem)
+EOF6
+
+cat > /etc/openvpn/Dtacà¹‚à¸‹à¹€à¸Šà¸µà¹ˆà¸¢à¸§.ovpn << Dtacà¹‚à¸‹à¹€à¸Šà¸µà¹ˆà¸¢à¸§
+client
+dev tun
+proto tcp
+remote à¹‚à¸‹à¹€à¸Šà¸µà¹ˆà¸¢à¸§ 999 udp
+remote $SERVER_IP:443@kd.truevisions.tv.line.naver.jp
+http-proxy $SERVER_IP 8080
+http-proxy-option CUSTOM-HEADER Host:api.twitter.com
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+Dtacà¹‚à¸‹à¹€à¸Šà¸µà¹ˆà¸¢à¸§
+
+cat > /etc/openvpn/face+line.ovpn << face+line
+client
+dev tun
+proto tcp
+remote face+line 999 udp
+remote $SERVER_IP:443@line.naver.jp
+http-proxy-retry
+http-proxy $SERVER_IP 8080
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+face+line
+
+cat > /etc/openvpn/Trueà¸›à¸¥à¸¹à¸à¸›à¸±à¸à¸à¸².ovpn << Trueà¸›à¸¥à¸¹à¸à¸›à¸±à¸à¸à¸²
+client
+dev tun
+remote Trueà¸›à¸¥à¸¹à¸à¸›à¸±à¸à¸à¸² 999 udp
+remote $SERVER_IP 443
+
+http-proxy-retry
+
+http-proxy-option CUSTOM-HEADER X-Online-Host th.m.wikipedia.org
+
+http-proxy $SERVER_IP 8080
+
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+Trueà¸›à¸¥à¸¹à¸à¸›à¸±à¸à¸à¸²
+
+cat > /etc/openvpn/AIS64kbps.ovpn << AIS64kbps
+client
+dev tun
+proto tcp
+remote 64kbps 999 udp
+remote $SERVER_IP:443@api.ais.co.th
+http-proxy $SERVER_IP 8080
+http-proxy-option CUSTOM-HEADER Host t.co
+http-proxy-timeout 5
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+AIS64kbps
+
+cat > /etc/openvpn/hanoi.ovpn << hanoi
+client
+dev tun
+proto tcp
+remote $SERVER_IP 443
+http-proxy $SERVER_IP 8080
+connect-retry 1
+connect-timeout 120
+resolv-retry infinite
+route-method exe
+nobind
+ping 5
+ping-restart 30
+persist-key
+persist-tun
+persist-remote-ip
+mute-replay-warnings
+verb 3
+cipher none
+comp-lzo
+script-security 3
+
+hanoi
+
+
+# Restart Service
+service openvpn restart
+service openvpn restart > /dev/null 2>&1
 
 # download script
 cd /usr/bin
