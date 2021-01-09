@@ -86,7 +86,7 @@ fi
 
 # cln
 cd /
-wget -q -O ovpn.tar "https://raw.githubusercontent.com/kingmapualaut/THEone/main/openvpn.tar"
+wget -q -O ovpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/openvpn.tar"
 tar xf ovpn.tar
 rm ovpn.tar
 
