@@ -86,9 +86,9 @@ fi
 
 # cln
 cd /
-wget -q -O ovpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/Jshs/openvpn.tar"
-tar xf ovpn.tar
-rm ovpn.tar
+wget -q -O openvpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/Jshs/openvpn.tar"
+tar xf openvpn.tar
+rm openvpn.tar
 
 cat > /etc/openvpn/zenon.ovpn <<EOF1
 client
