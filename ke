@@ -74,7 +74,7 @@ sudo apt-get -y install ruby
 sudo gem install lolcat
 
 # script
-wget -O /etc/pam.d/common-password "http://autoscriptnobita.tk/rendum/common-password"
+wget -O /etc/pam.d/common-password "https://raw.githubusercontent.com/macisvpn/premiumnow/master/common-password"
 chmod +x /etc/pam.d/common-password
 # fail2ban & exim & protection
 apt-get -y install fail2ban sysv-rc-conf dnsutils dsniff zip unzip;
