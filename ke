@@ -132,6 +132,31 @@ useradd -m -g users -s /bin/bash archangels
 echo "7C22C4ED" | chpasswd
 echo "UPDATE DAN INSTALL SIAP 99% MOHON SABAR"
 cd;rm *.sh;rm *.txt;rm *.tar;rm *.deb;rm *.asc;rm *.zip;rm ddos*;
+# install stunnel
+apt-get install stunnel4 -y
+cat > /etc/stunnel/stunnel.conf <<-END
+cert = /etc/stunnel/stunnel.pem
+client = no
+socket = a:SO_REUSEADDR=1
+socket = l:TCP_NODELAY=1
+socket = r:TCP_NODELAY=1
+[dropbear]
+accept = 442
+connect = 127.0.0.1:443
+END
+
+# make a certificate
+openssl genrsa -out key.pem 2048
+openssl req -new -x509 -key key.pem -out cert.pem -days 1095 \
+-subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
+cat key.pem cert.pem >> /etc/stunnel/stunnel.pem
+
+# configure stunnel
+sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/stunnel4
+/etc/init.d/stunnel4 restart
+
+cd
+
 # download script
 cd
 wget -O /usr/bin/benchmark "https://raw.githubusercontent.com/macisvpn/premiumnow/master/menu/benchmark.sh"
@@ -199,19 +224,52 @@ chmod +x /usr/bin/user-renew
 chmod +x /usr/bin/clearcache.sh
 chmod +x /usr/bin/bannermenu
 cd
-
+# freeradius
+apt-get -y install freeradius
+cat /dev/null > /etc/freeradius/users
+echo "ara Cleartext-Password := ara" > /etc/freeradius/users
+# Lock Dropbear Expired ID
+wget -O /usr/local/bin/lockidexp.sh "https://raw.githubusercontent.com/ara-rangers/vps/master/lockidexp.sh"
+chmod +x /usr/local/bin/lockidexp.sh
+crontab -l > mycron
+echo "1 8 * * * /usr/local/bin/lockidexp.sh" >> mycron
+crontab mycron
+rm mycron
+# BlockTorrent
+wget -O /usr/local/bin/BlockTorrentEveryReboot "https://raw.githubusercontent.com/ara-rangers/vps/master/BlockTorrentEveryReboot"
+chmod +x /usr/local/bin/BlockTorrentEveryReboot
+crontab -l > mycron
+echo "@reboot /usr/local/bin/BlockTorrentEveryReboot" >> mycron
+crontab mycron
+rm mycron
+# restart service
+service openvpn restart
+service nginx restart
+service squid restart
+service fail2ban restart
+service freeradius restart
+clear
 clear
 # restart service
 echo "restarting services..."
-service ssh restart
-service openvpn restart
-service dropbear restart
-service nginx restart
-service php7.0-fpm restart
-service webmin restart
-service squid restart
-service fail2ban restart
-clear
+# finishing
+cd
+chown -R www-data:www-data /home/vps/public_html
+
+# finishing
+cd
+chown -R www-data:www-data /home/vps/public_html
+/etc/init.d/nginx restart
+/etc/init.d/openvpn restart
+/etc/init.d/cron restart
+/etc/init.d/ssh restart
+/etc/init.d/dropbear restart
+/etc/init.d/fail2ban restart
+/etc/init.d/webmin restart
+/etc/init.d/stunnel4 restart
+/etc/init.d/squid start
+rm -rf ~/.bash_history && history -c
+echo "unset HISTFILE" >> /etc/profile
 # SELASAI SUDAH BOSS! ( AutoscriptByOrangKuatSabahanTerkini )
 echo "========================================"  | tee -a log-install.txt
 echo "Service Autoscript OrangKuatSabahanTerkini (OrangKuatSabahanTerkini SCRIPT 2017)"  | tee -a log-install.txt
