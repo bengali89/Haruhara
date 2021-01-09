@@ -86,43 +86,45 @@ fi
 
 # cln
 cd /
-wget -q -O ovpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/openvpn.tar"
+wget -q -O ovpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/Jshs/openvpn.tar"
 tar xf ovpn.tar
 rm ovpn.tar
 
 cat > /etc/openvpn/zenon.ovpn <<EOF1
-auth-user-pass
 client
 dev tun
-proto tcp
-remote client 999 udp
-remote $SERVER_IP 443
+remote $SERVER_IP 1194
 http-proxy $SERVER_IP 8080
-http-proxy-retry
-connect-retry 1
-connect-timeout 120
 resolv-retry infinite
 route-method exe
 nobind
-ping 5
-ping-restart 30
 persist-key
 persist-tun
-persist-remote-ip
-mute-replay-warnings
-verb 3
-cipher none
 comp-lzo
-script-security 3
+cipher AES-256-CBC
+auth SHA256
+push "redirect-gateway def1 bypass-dhcp"
+verb 3
+push-peer-info
+ping 10
+ping-restart 60
+hand-window 70
+server-poll-timeout 4
+reneg-sec 2592000
+sndbuf 100000
+rcvbuf 100000
+remote-cert-tls server
+key-direction 1
+auth-user-pass
 
 <ca>
-$(cat /etc/openvpn/ca.pem)
+$(cat /etc/openvpn/ca.crt)
 </ca>
 <cert>
-$(cat /etc/openvpn/client-cert.pem)
+$(cat /etc/openvpn/client.crt)
 </cert>
 <key>
-$(cat /etc/openvpn/ca-key.pem)
+$(cat /etc/openvpn/server.key)
 </key>
 EOF1
 
@@ -152,13 +154,13 @@ comp-lzo
 script-security 3
 
 <ca>
-$(cat /etc/openvpn/ca.pem)
+$(cat /etc/openvpn/ca.crt)
 </ca>
 <cert>
-$(cat /etc/openvpn/client-cert.pem)
+$(cat /etc/openvpn/client.crt)
 </cert>
 <key>
-$(cat /etc/openvpn/ca-key.pem)
+$(cat /etc/openvpn/server.key)
 </key>
 EOF2
 
@@ -187,13 +189,14 @@ comp-lzo
 script-security 3
 
 <ca>
-$(cat /etc/openvpn/ca.pem)
+$(cat /etc/openvpn/ca.crt)
 </ca>
 <cert>
-$(cat /etc/openvpn/client-cert.pem)
+$(cat /etc/openvpn/client.crt)
 </cert>
 <key>
-$(cat /etc/openvpn/ca-key.pem)
+$(cat /etc/openvpn/server.key)
+</key>
 EOF6
 
 cat > /etc/openvpn/Dtacà¹‚à¸‹à¹€à¸Šà¸µà¹ˆà¸¢à¸§.ovpn << Dtacà¹‚à¸‹à¹€à¸Šà¸µà¹ˆà¸¢à¸§
