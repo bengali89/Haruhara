@@ -92,7 +92,7 @@ sed -i "s/ipserver/$myip/g" /etc/squid3/squid.conf# openvpn
 #  openvpn
 apt-get -y install openvpn
 cd /etc/openvpn/
-wget -O openvpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/keys.tar"
+wget -O openvpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/Nzn949/openvpn.tar"
 tar xf openvpn.tar;rm openvpn.tar
 wget -O /etc/rc.local "https://raw.githubusercontent.com/guardeumvpn/Qwer77/master/rc.local"
 chmod +x /etc/rc.local
@@ -110,7 +110,7 @@ wget -O /etc/nginx/conf.d/vps.conf "https://raw.githubusercontent.com/ara-ranger
 sed -i 's/listen = \/var\/run\/php7.0-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/7.0/fpm/pool.d/www.conf
 service php7.0-fpm restart
 # etc
-wget -O /home/vps/public_html/client.ovpn "https://github.com/bengali89/zero/blob/main/Nsjsj/client.ovpn"
+wget -O /home/vps/public_html/client.ovpn "https://raw.githubusercontent.com/bengali89/zero/main/Nsjsj/client.ovpn"
 wget -O /home/vps/public_html/udp.ovpn "https://gakod.com/AUTOVPS/udp.ovpn"
 wget -O /home/vps/public_html/client1.ovpn "https://raw.githubusercontent.com/BangJaguh/VPN/main/c/client1.ovpn"
 wget -O /home/vps/public_html/client3.ovpn "https://gakod.com/debian/client3.ovpn"
