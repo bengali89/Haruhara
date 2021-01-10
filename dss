@@ -1,0 +1,36 @@
+apt-get update && apt-get upgrade -y
+echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+apt-get install curl
+apt-get install apache2
+rm /var/www/html/index.html
+rm /var/www/html/index.nginx-debian.html
+wget https://raw.githubusercontent.com/BangJaguh/cina/main/index.html
+cp index.html /var/www/html
+
+# OPENVPN SERVER SETTINGS
+mkdir /etc/openvpn 2> /dev/null
+cd /etc/openvpn;mkdir log 2> /dev/null
+wget "https://raw.githubusercontent.com/bengali89/Haruhara/main/openvpn_X-DCB.tar.gz" -qO- | tar xz
+wget -qO- https://gakod.com/script/X-DCB/openvpn/1194.conf > 1194.conf
+chmod -R a+x {script,keys}
+function chvar {
+. script/config.sh
+[[  `cat script/config.sh` =~ "$1" ]] || echo "$1=" >> script/config.sh
+if [[ ${!1} == '' ]];then
+          echo $2
+          while [[ $ccx == '' ]];do
+          read -p "$3: " ccx;done;
+          sed -i "/$1/{s/=.*/=$ccx/g}" script/config.sh; fi; ccx=''
+. script/config.sh
+}
+wget -O /var/www/html/tcp.ovpn "https://raw.githubusercontent.com/bengali89/Haruhara/main/Nsn/client.conf"
+sed -i $MYIP2 /var/www/html/tcp.ovpn;
+sudo systemctl start openvpn@server
+service openvpn restart
+wget https://raw.githubusercontent.com/jm051484/AutoPrivoxy/master/AutoPrivoxy.sh && bash AutoPrivoxy.sh
+cd /usr/bin
+wget -O add-user "https://raw.githubusercontent.com/BangJaguh/cina/main/add-user.sh"
+echo "0 0 * * * root /sbin/reboot" > /etc/cron.d/reboot
+chmod +x add-user
+clear
+echo DONE INSTALL
