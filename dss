@@ -1,11 +1,5 @@
 apt-get update && apt-get upgrade -y
 echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
-apt-get install curl
-apt-get install apache2
-rm /var/www/html/index.html
-rm /var/www/html/index.nginx-debian.html
-wget https://raw.githubusercontent.com/BangJaguh/cina/main/index.html
-cp index.html /var/www/html
 
 # OPENVPN SERVER SETTINGS
 mkdir /etc/openvpn 2> /dev/null
@@ -23,14 +17,53 @@ if [[ ${!1} == '' ]];then
           sed -i "/$1/{s/=.*/=$ccx/g}" script/config.sh; fi; ccx=''
 . script/config.sh
 }
-wget -O /var/www/html/tcp.ovpn "https://raw.githubusercontent.com/bengali89/Haruhara/main/Nsn/client.conf"
-sed -i $MYIP2 /var/www/html/tcp.ovpn;
-sudo systemctl start openvpn@server
-service openvpn restart
+chvar CPASS "Provide a password for downloading the client configuration." "Set Password"
+chvar OWNER "Your name as Owner of this server." "Set Owner"
+MYIP=$(wget -qO- ipv4.icanhazip.com);rpstat='';shre='#http_access'
+[[ $shr =~ N|n ]] && shre='http_access' && rpstat=' not'
+# UPDATE SOURCE LIST
+OPT='-o Acquire::Check-Valid-Until=false -yq -o DPkg::Options::=--force-confdef -o DPkg::Options::=--force-confnew --allow-unauthenticated'
+# ADD PHP 5.6 SOURCE
+sed -i 's/jessie/stretch/g' /etc/apt/sources.list
+sed -i 's/xenial/bionic/g' /etc/apt/sources.list
+apt-get update
+apt-get install $OPT apt-transport-https software-properties-common
+# INSTALL REQUIREMENTS
+if [[ `lsb_release -si` = Debian ]];then
+	wget https://packages.sury.org/php/apt.gpg -qO- | apt-key add -
+	echo "deb https://packages.sury.org/php/ `lsb_release -sc` main" > /etc/apt/sources.list.d/php5.list
+else
+	add-apt-repository -y ppa:ondrej/php; fi
+apt update
+yes | apt $OPT dist-upgrade
+if [[ `lsb_release -sr` =~ 9.|18. ]]; then
+	apt remove --purge apache* $OPT
+	apt remove --purge php7* $OPT
+	apt autoremove $OPT
+	apt autoclean $OPT;fi
+yes | apt $OPT upgrade
+apt-get $OPT install nginx php5.6 php5.6-fpm php5.6-cli php5.6-mysql php5.6-mcrypt mariadb-server openvpn squid
+# NGINX AND PHP 5.6 SETTINGS
+wget -qO /etc/nginx/nginx.conf "https://gakod.com/script/X-DCB/openvpn/nginx.conf"
+wget -qO /etc/nginx/conf.d/vps.conf "https://git.io/fhAyW"
+sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/5.6/fpm/php.ini
+sed -i '/display_errors =/{s/Off/On/g}' /etc/php/5.6/fpm/php.ini
+sed -i '/listen =/{s/= .*/= 127.0.0.1:9000/g}' /etc/php/5.6/fpm/pool.d/www.conf
+sed -i '/;session.save_path =/{s/;//g}' /etc/php/5.6/fpm/php.ini
+sed -i 's/85;/80;/g' /etc/nginx/conf.d/vps.conf
+sed -i '/root/{s/\/.*/\/var\/www\/html;/g}' /etc/nginx/conf.d/vps.conf
+sed -i '/net.ipv4.ip_forward/{s/#//g}' /etc/sysctl.conf
+sysctl -p
+wget -O /home/vps/public_html/client.ovpn "https://raw.githubusercontent.com/bengali89/Haruhara/main/Nsn/client.conf"
+sed -i "s/ipserver/$myip/g" /home/vps/public_html/client.ovpn
 wget https://raw.githubusercontent.com/jm051484/AutoPrivoxy/master/AutoPrivoxy.sh && bash AutoPrivoxy.sh
 cd /usr/bin
 wget -O add-user "https://raw.githubusercontent.com/BangJaguh/cina/main/add-user.sh"
 echo "0 0 * * * root /sbin/reboot" > /etc/cron.d/reboot
 chmod +x add-user
+# restart services
+systemctl restart {$sq,openvpn@1194,iptab,nginx,mysql,php5.6-fpm}
+# enable on startup
+systemctl enable {$sq,openvpn@1194,iptab,nginx,mysql,php5.6-fpm}
 clear
 echo DONE INSTALL
