@@ -1,0 +1,142 @@
+#!/bin/bash
+#
+# Original script by fornesia, rzengineer and fawzya
+# Mod by admin Hidessh
+# ==================================================
+
+# initialisasi var
+export DEBIAN_FRONTEND=noninteractive
+OS=`uname -m`;
+MYIP=$(wget -qO- ipv4.icanhazip.com);
+MYIP2="s/xxxxxxxxx/$MYIP/g";
+
+# set time GMT +7
+ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+
+# disable ipv6
+echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+sed -i '$ i\echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6' /etc/rc.local
+
+# update repository
+apt update -y
+
+# Install PHP 5.6
+apt-get install sudo -y
+usermod -aG sudo root
+
+sudo apt -y install ca-certificates apt-transport-https
+wget -q https://packages.sury.org/php/apt.gpg -O- | sudo apt-key add -
+echo "deb https://packages.sury.org/php/ stretch main" | sudo tee /etc/apt/sources.list.d/php.list
+
+sudo apt update -y
+sudo apt install php5.6 -y
+sudo apt install php5.6-mcrypt php5.6-mysql php5.6-fpm php5.6-cli php5.6-common php5.6-curl php5.6-mbstring php5.6-mysqlnd php5.6-xml -y
+
+# install webserver
+cd
+sudo apt-get -y install nginx
+rm /etc/nginx/sites-enabled/default
+rm /etc/nginx/sites-available/default
+wget -O /etc/nginx/nginx.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/nginx-default.conf"
+mkdir -p /home/vps/public_html
+echo "<?php phpinfo() ?>" > /home/vps/public_html/info.php
+wget -O /etc/nginx/conf.d/vps.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/vhost-nginx.conf"
+/etc/init.d/nginx restart
+
+# instal nginx php5.6 
+apt-get -y install nginx php5.6-fpm
+apt-get -y install nginx php5.6-cli
+apt-get -y install nginx php5.6-mysql
+apt-get -y install nginx php5.6-mcrypt
+sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/5.6/cli/php.ini
+
+# cari config php fpm dengan perintah berikut "php --ini |grep Loaded"
+sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/5.6/cli/php.ini
+
+# Cari config php fpm www.conf dengan perintah berikut "find / \( -iname "php.ini" -o -name "www.conf" \)"
+sed -i 's/listen = \/run\/php\/php5.6-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/5.6/fpm/pool.d/www.conf
+cd
+
+
+# Edit port apache2 ke 8090
+wget -O /etc/apache2/ports.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/apache2.conf"
+
+# Edit port virtualhost apache2 ke 8090
+wget -O /etc/apache2/sites-enabled/000-default.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/virtualhost.conf"
+
+# restart apache2
+/etc/init.d/apache2 restart
+
+#needed by openvpn-nl
+apt-get -y install apt-transport-https
+
+#adding source list
+echo "deb https://openvpn.fox-it.com/repos/deb wheezy main" > /etc/apt/sources.list.d/foxit.list
+apt-get update
+wget https://openvpn.fox-it.com/repos/fox-crypto-gpg.asc
+apt-key add fox-crypto-gpg.asc
+
+apt-get update
+cd /root
+
+#installing normal openvpn, easy rsa & openvpn-nl
+apt-get install easy-rsa -y
+apt-get install openvpn -y
+apt-get install openvpn-nl -y
+
+#ipforward
+sysctl -w net.ipv4.ip_forward=1
+sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
+iptables -F
+iptables -t nat -F
+iptables -t nat -A POSTROUTING -s 10.8.0.0/16 -o eth0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 172.16.0.0/16 -o eth0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 172.1.0.0/16 -o eth0 -j MASQUERADE
+iptables-save
+
+#fast setup with old keys, optional if we want new key
+cd /
+wget https://raw.githubusercontent.com/zero9911/script/master/script/ovpn.tar
+tar -xvf ovpn.tar
+rm ovpn.tar
+
+wget -O /etc/rc.local "https://raw.githubusercontent.com/rasta-team/Debian_V1/master/rc.local";chmod +x /etc/rc.local
+
+#config upload
+wget -O /home/vps/public_html/client.ovpn "https://raw.githubusercontent.com/bengali89/zero/main/Nsjsj/client.ovpn"
+sed -i "s/ipserver/$myip/g" /home/vps/public_html/client.ovpn
+
+# download script
+cd /usr/bin
+wget -O menu "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/menu.sh"
+wget -O usernew "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/usernew.sh"
+wget -O trial "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/trial.sh"
+wget -O hapus "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/hapus.sh"
+wget -O cek "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/user-login.sh"
+wget -O member "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/user-list.sh"
+wget -O jurus69 "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/restart.sh"
+wget -O speedtest "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/speedtest_cli.py"
+wget -O info "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/info.sh"
+wget -O about "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/about.sh"
+wget -O delete "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/delete.sh"
+
+echo "0 0 * * * root /sbin/reboot" > /etc/cron.d/reboot
+
+chmod +x menu
+chmod +x usernew
+chmod +x trial
+chmod +x hapus
+chmod +x cek
+chmod +x member
+chmod +x jurus69
+chmod +x speedtest
+chmod +x info
+chmod +x about
+chmod +x delete
+wget https://raw.githubusercontent.com/ndndndn/CodesX/main/sq3.sh && bash sq3.sh
+# wget https://raw.githubusercontent.com/padubang/gans/main/setupmenu && bash setupmenu
+echo "0 0 * * * root /sbin/reboot" > /etc/cron.d/reboot
+clear
+echo DONE INSTALL
+clear
+echo DONE INSTALL
