@@ -137,9 +137,9 @@ END
 cd
  
 # create openvpn config
-cat > openvpn.ovpn <<-END
-#OpenVPN and SSH Panel by Bjorn VPN
- 
+#Create OpenVPN Config
+mkdir -p /home/vps/public_html
+cat > /home/vps/public_html/client.ovpn <<-END
 client
 dev tun
 proto tcp
@@ -176,10 +176,10 @@ keepalive 2 60
 verb 5
  
 END
-echo '<ca>' >> openvpn.ovpn
-cat /etc/openvpn/ca.crt >> openvpn.ovpn
-echo '</ca>' >> openvpn.ovpn
-sed -i $server_ip openvpn.ovpn;
+echo '<ca>' >> /home/vps/public_html/client.ovpn
+cat /etc/openvpn/ca.crt >> /home/vps/public_html/client.ovpn
+echo '</ca>' >> /home/vps/public_html/client.ovpn
+
  # iptables-persistent
 apt install iptables-persistent -y
 
