@@ -1,0 +1,1043 @@
+#!/bin/bash
+# Debian 9 and 10 VPS Installer
+# Script by Bonveio Abitona
+# 
+# Illegal selling and redistribution of this script is strictly prohibited
+# Please respect author's Property
+# Binigay sainyo ng libre, ipamahagi nyo rin ng libre.
+#
+#
+
+#############################
+#############################
+
+#L2TP SCRIPT DEBIAN 9 10 & UBUNTU 16 17 18 19
+###wget -q 'https://raw.githubusercontent.com/Barts-23/L2tp-ipsec/master/l2tp_debuntu.sh' && chmod +x l2tp_debuntu.sh && ./l2tp_debuntu.sh
+###wget -q 'https://raw.githubusercontent.com/Barts-23/L2tp-ipsec/master/add_vpn_user.sh' && chmod +x add_vpn_user.sh && ./add_vpn_user.sh
+###wget -q 'https://raw.githubusercontent.com/Barts-23/L2tp-ipsec/master/update_vpn_users.sh' && chmod +x update_vpn_users.sh && ./update_vpn_users.sh
+
+# Variables (Can be changed depends on your preferred values)
+# Script name
+MyScriptName='XAMJYSScript'
+
+# OpenSSH Ports
+SSH_Port1='22'
+SSH_Port2='225'
+
+# Your SSH Banner
+SSH_Banner='https://raw.githubusercontent.com/itsgelogomayee/dpndncy/master/banner'
+
+# Dropbear Ports
+Dropbear_Port1='109'
+Dropbear_Port2='442'
+
+# Stunnel Ports
+Stunnel_Port1='444' # through Dropbear
+Stunnel_Port2='440' # through OpenSSH
+
+# OpenVPN Ports
+OpenVPN_Port1='443'
+OpenVPN_Port2='1194' # take note when you change this port, openvpn sun noload config will not work
+
+# Privoxy Ports (must be 1024 or higher)
+Privoxy_Port1='8118'
+Privoxy_Port2='8888'
+# OpenVPN Config Download Port
+OvpnDownload_Port='80' # Before changing this value, please read this document. It contains all unsafe ports for Google Chrome Browser, please read from line #23 to line #89: https://chromium.googlesource.com/chromium/src.git/+/refs/heads/master/net/base/port_util.cc
+
+# Server local time
+MyVPS_Time='Asia/Kuala_Lumpur'
+#############################
+
+
+#############################
+#############################
+## All function used for this script
+#############################
+## WARNING: Do not modify or edit anything
+## if you did'nt know what to do.
+## This part is too sensitive.
+#############################
+#############################
+
+function InstUpdates(){
+ export DEBIAN_FRONTEND=noninteractive
+ apt-get update
+ apt-get upgrade -y
+ 
+ # Removing some firewall tools that may affect other services
+ #apt-get remove --purge ufw firewalld -y
+
+ 
+ # Installing some important machine essentials
+ apt-get install nano wget curl zip unzip tar gzip p7zip-full bc rc openssl cron net-tools dnsutils dos2unix screen bzip2 ccrypt -y
+ 
+ # Now installing all our wanted services
+ apt-get install dropbear stunnel4 privoxy ca-certificates nginx ruby apt-transport-https lsb-release squid screenfetch -y
+
+ # Installing all required packages to install Webmin
+ apt-get install perl libnet-ssleay-perl openssl libauthen-pam-perl libpam-runtime libio-pty-perl apt-show-versions python dbus libxml-parser-perl -y
+ apt-get install shared-mime-info jq -y
+ 
+ # Installing a text colorizer
+ gem install lolcat
+
+ # Trying to remove obsolette packages after installation
+ apt-get autoremove -y
+ 
+ # Installing OpenVPN by pulling its repository inside sources.list file 
+ #rm -rf /etc/apt/sources.list.d/openvpn*
+ echo "deb http://build.openvpn.net/debian/openvpn/stable $(lsb_release -sc) main" >/etc/apt/sources.list.d/openvpn.list && apt-key del E158C569 && wget -O - https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add -
+ wget -qO security-openvpn-net.asc "https://keys.openpgp.org/vks/v1/by-fingerprint/F554A3687412CFFEBDEFE0A312F5F7B42F2B01E7" && gpg --import security-openvpn-net.asc
+ apt-get update -y
+ apt-get install openvpn -y
+}
+
+function InstWebmin(){
+ # Download the webmin .deb package
+ # You may change its webmin version depends on the link you've loaded in this variable(.deb file only, do not load .zip or .tar.gz file):
+ WebminFile='http://prdownloads.sourceforge.net/webadmin/webmin_1.910_all.deb'
+ wget -qO webmin.deb "$WebminFile"
+ 
+ # Installing .deb package for webmin
+ dpkg --install webmin.deb
+ 
+ rm -rf webmin.deb
+ 
+ # Configuring webmin server config to use only http instead of https
+ sed -i 's|ssl=1|ssl=0|g' /etc/webmin/miniserv.conf
+ 
+ # Then restart to take effect
+ systemctl restart webmin
+}
+
+function InstSSH(){
+ # Removing some duplicated sshd server configs
+ rm -f /etc/ssh/sshd_config*
+ 
+ # Creating a SSH server config using cat eof tricks
+ cat <<'MySSHConfig' > /etc/ssh/sshd_config
+# My OpenSSH Server config
+Port myPORT1
+Port myPORT2
+AddressFamily inet
+ListenAddress 0.0.0.0
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+PermitRootLogin yes
+MaxSessions 1024
+PubkeyAuthentication yes
+PasswordAuthentication yes
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM yes
+X11Forwarding yes
+PrintMotd no
+ClientAliveInterval 240
+ClientAliveCountMax 2
+UseDNS no
+Banner /etc/banner
+AcceptEnv LANG LC_*
+Subsystem   sftp  /usr/lib/openssh/sftp-server
+MySSHConfig
+
+ # Now we'll put our ssh ports inside of sshd_config
+ sed -i "s|myPORT1|$SSH_Port1|g" /etc/ssh/sshd_config
+ sed -i "s|myPORT2|$SSH_Port2|g" /etc/ssh/sshd_config
+
+ # Download our SSH Banner
+ rm -f /etc/banner
+ wget -qO /etc/banner "$SSH_Banner"
+ dos2unix -q /etc/banner
+
+ # My workaround code to remove `BAD Password error` from passwd command, it will fix password-related error on their ssh accounts.
+ sed -i '/password\s*requisite\s*pam_cracklib.s.*/d' /etc/pam.d/common-password
+ sed -i 's/use_authtok //g' /etc/pam.d/common-password
+
+ # Some command to identify null shells when you tunnel through SSH or using Stunnel, it will fix user/pass authentication error on HTTP Injector, KPN Tunnel, eProxy, SVI, HTTP Proxy Injector etc ssh/ssl tunneling apps.
+ sed -i '/\/bin\/false/d' /etc/shells
+ sed -i '/\/usr\/sbin\/nologin/d' /etc/shells
+ echo '/bin/false' >> /etc/shells
+ echo '/usr/sbin/nologin' >> /etc/shells
+ 
+ # Restarting openssh service
+ systemctl restart ssh
+ 
+ # Removing some duplicate config file
+ rm -rf /etc/default/dropbear*
+ 
+ # creating dropbear config using cat eof tricks
+ cat <<'MyDropbear' > /etc/default/dropbear
+# My Dropbear Config
+NO_START=0
+DROPBEAR_PORT=PORT01
+DROPBEAR_EXTRA_ARGS="-p PORT02"
+DROPBEAR_BANNER="/etc/banner"
+DROPBEAR_RSAKEY="/etc/dropbear/dropbear_rsa_host_key"
+DROPBEAR_DSSKEY="/etc/dropbear/dropbear_dss_host_key"
+DROPBEAR_ECDSAKEY="/etc/dropbear/dropbear_ecdsa_host_key"
+DROPBEAR_RECEIVE_WINDOW=65536
+MyDropbear
+
+ # Now changing our desired dropbear ports
+ sed -i "s|PORT01|$Dropbear_Port1|g" /etc/default/dropbear
+ sed -i "s|PORT02|$Dropbear_Port2|g" /etc/default/dropbear
+ 
+ # Restarting dropbear service
+ systemctl restart dropbear
+}
+
+function InsStunnel(){
+ StunnelDir=$(ls /etc/default | grep stunnel | head -n1)
+
+ # Creating stunnel startup config using cat eof tricks
+cat <<'MyStunnelD' > /etc/default/$StunnelDir
+# My Stunnel Config
+ENABLED=1
+FILES="/etc/stunnel/*.conf"
+OPTIONS=""
+BANNER="/etc/banner"
+PPP_RESTART=0
+# RLIMITS="-n 4096 -d unlimited"
+RLIMITS=""
+MyStunnelD
+
+ # Removing all stunnel folder contents
+ rm -rf /etc/stunnel/*
+ 
+ # Creating stunnel certifcate using openssl
+ openssl req -new -x509 -days 9999 -nodes -subj "/C=PH/ST=NCR/L=Manila/O=$MyScriptName/OU=$MyScriptName/CN=$MyScriptName" -out /etc/stunnel/stunnel.pem -keyout /etc/stunnel/stunnel.pem &> /dev/null
+##  > /dev/null 2>&1
+
+ # Creating stunnel server config
+ cat <<'MyStunnelC' > /etc/stunnel/stunnel.conf
+# My Stunnel Config
+pid = /var/run/stunnel.pid
+cert = /etc/stunnel/stunnel.pem
+client = no
+socket = l:TCP_NODELAY=1
+socket = r:TCP_NODELAY=1
+TIMEOUTclose = 0
+
+[dropbear]
+accept = Stunnel_Port1
+connect = 127.0.0.1:dropbear_port_c
+
+[openssh]
+accept = Stunnel_Port2
+connect = 127.0.0.1:openssh_port_c
+
+[openvpn]
+accept = 441
+connect = 127.0.0.1:110
+cert = /etc/stunnel/stunnel.pem
+MyStunnelC
+
+ # setting stunnel ports
+ sed -i "s|Stunnel_Port1|$Stunnel_Port1|g" /etc/stunnel/stunnel.conf
+ sed -i "s|dropbear_port_c|$(netstat -tlnp | grep -i dropbear | awk '{print $4}' | cut -d: -f2 | xargs | awk '{print $2}' | head -n1)|g" /etc/stunnel/stunnel.conf
+ sed -i "s|Stunnel_Port2|$Stunnel_Port2|g" /etc/stunnel/stunnel.conf
+ sed -i "s|openssh_port_c|$(netstat -tlnp | grep -i ssh | awk '{print $4}' | cut -d: -f2 | xargs | awk '{print $2}' | head -n1)|g" /etc/stunnel/stunnel.conf
+
+ # Restarting stunnel service
+ systemctl restart $StunnelDir
+
+}
+
+function InsOpenVPN(){
+ # Checking if openvpn folder is accidentally deleted or purged
+ if [[ ! -e /etc/openvpn ]]; then
+  mkdir -p /etc/openvpn
+ fi
+
+ # Removing all existing openvpn server files
+ rm -rf /etc/openvpn/*
+
+ # Creating server.conf, ca.crt, server.crt and server.key
+ cat <<'myOpenVPNconf1' > /etc/openvpn/server_tcp.conf
+# XAMScript
+
+port MyOvpnPort1
+dev tun
+proto tcp
+ca ca.crt
+cert server.crt
+key server.key
+duplicate-cn
+dh none
+persist-tun
+persist-key
+persist-remote-ip
+cipher none
+ncp-disable
+auth none
+comp-lzo
+tun-mtu 1500
+reneg-sec 0
+plugin /etc/openvpn/openvpn-auth-pam.so /etc/pam.d/login
+verify-client-cert none
+username-as-common-name
+max-clients 4000
+topology subnet
+server 172.16.0.0 255.255.0.0
+push "redirect-gateway def1"
+keepalive 5 60
+status /etc/openvpn/tcp_stats.log
+log /etc/openvpn/tcp.log
+verb 2
+script-security 2
+socket-flags TCP_NODELAY
+push "socket-flags TCP_NODELAY"
+push "dhcp-option DNS 1.0.0.1"
+push "dhcp-option DNS 1.1.1.1"
+push "dhcp-option DNS 8.8.4.4"
+push "dhcp-option DNS 8.8.8.8"
+myOpenVPNconf1
+cat <<'myOpenVPNconf2' > /etc/openvpn/server_udp.conf
+# XAMScript
+
+port MyOvpnPort2
+dev tun
+proto udp
+ca ca.crt
+cert server.crt
+key server.key
+duplicate-cn
+dh none
+persist-tun
+persist-key
+persist-remote-ip
+cipher none
+ncp-disable
+auth none
+comp-lzo
+tun-mtu 1500
+reneg-sec 0
+plugin /etc/openvpn/openvpn-auth-pam.so /etc/pam.d/login
+verify-client-cert none
+username-as-common-name
+max-clients 4000
+topology subnet
+server 172.17.0.0 255.255.0.0
+push "redirect-gateway def1"
+keepalive 5 60
+status /etc/openvpn/tcp_stats.log
+log /etc/openvpn/tcp.log
+verb 2
+script-security 2
+socket-flags TCP_NODELAY
+push "socket-flags TCP_NODELAY"
+push "dhcp-option DNS 1.0.0.1"
+push "dhcp-option DNS 1.1.1.1"
+push "dhcp-option DNS 8.8.4.4"
+push "dhcp-option DNS 8.8.8.8"
+myOpenVPNconf2
+ cat <<'EOF7'> /etc/openvpn/ca.crt
+-----BEGIN CERTIFICATE-----
+MIIDTTCCAjWgAwIBAgIJAKzEKtgnVsRpMA0GCSqGSIb3DQEBCwUAMB4xHDAaBgNV
+BAMUE2NuX3hSWHJCUEI2Z1VEbmRNZ1EwHhcNMTgwOTExMDMyMTEyWhcNMjgwOTA4
+MDMyMTEyWjAeMRwwGgYDVQQDFBNjbl94UlhyQlBCNmdVRG5kTWdRMIIBIjANBgkq
+hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3EbQStqZoLPDngmWSowCSG7oQCPPxq72
+JBRmpsNp54lNRIf2R6ShgVmBLniRFKdSW3genArhJATImLqPVmXviEfVUY/v4rgO
+dtFF0vqSBXMe5ph1x54BmJIrGKCocSEX1HRWDdiCLoBDO1h0PQAqeXvCBoNDBAPp
+kIKNPcd/JRgdsrLm6bA9sgvw3uvJNL8rjh05eSr6xsNfyEq+lw0r79Czp1yZfRfr
+vj75uMajOX2NS3n1pqH5T7OEiOsLjwAoaFiX43MVXFUh9KdOuZLvd8S7RmsUs3cC
+Zxd8+sPL2pij/Sf0QWAVPOfLc605lDSaZUSEGkVwLLHMyp+zaDIpkwIDAQABo4GN
+MIGKMB0GA1UdDgQWBBSdZjptalfGqJmTlNsPsH4Uksz7fDBOBgNVHSMERzBFgBSd
+ZjptalfGqJmTlNsPsH4Uksz7fKEipCAwHjEcMBoGA1UEAxQTY25feFJYckJQQjZn
+VURuZE1nUYIJAKzEKtgnVsRpMAwGA1UdEwQFMAMBAf8wCwYDVR0PBAQDAgEGMA0G
+CSqGSIb3DQEBCwUAA4IBAQBHF2cZURAWB8ymxv7oVe7Vt/IyS7NrxEfUEzZeuk9p
+9I6UuaSVH971zRAXUJ533qfxNtEcexw2kUSNVPVyfjGoIFZnRofSN4q7qQz53muw
+HrPl1EhvLUZ7cR6seJLX6jNMPKVedDZpQPAipHghUaNwtM6YWf3klixfJheMha/U
+Ybi+OIupHMxzm9axvJNpOO8AgMdjZCs73GWyoM+CEWzcqmKvtLtMQ3daOdOD42Qx
+oILneL41tEt/HdEgEcMw9OHCcE1JbOc+t53QtU4/y6pJbgweDqEgh2M8PGFgk/nW
+o3QxSGc0UOObrOsvyhWlkm0kp6Ui0x7J4TrQ9BEd4CPK
+-----END CERTIFICATE-----
+</ca>
+<cert>
+EOF7
+ cat <<'EOF9'> /etc/openvpn/server.crt
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            64:78:3b:f4:a1:86:15:31:33:34:3e:9c:f6:dc:af:b3
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=cn_xRXrBPB6gUDndMgQ
+        Validity
+            Not Before: Sep 11 03:37:50 2018 GMT
+            Not After : Sep  8 03:37:50 2028 GMT
+        Subject: CN=drift
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:b6:c4:6b:13:cf:b7:0a:a6:8a:98:5d:31:6b:5f:
+                    88:0b:1c:28:80:97:54:61:47:fe:bc:e7:5a:f8:f4:
+                    2d:a4:5d:bd:76:25:be:d2:4c:f5:61:b1:bc:0b:f8:
+                    0b:cc:3d:bc:77:95:d7:37:15:57:98:b7:47:15:60:
+                    e5:a1:c6:6a:2f:64:f3:72:52:9b:fb:a4:88:6f:59:
+                    9a:74:41:2e:d2:b6:52:50:5a:8e:c4:19:a7:80:bd:
+                    97:36:f9:71:bd:4c:6b:e4:12:61:8b:a3:44:0e:49:
+                    53:88:23:12:47:3a:f1:98:64:1d:9b:4c:0c:7f:d0:
+                    45:d7:7f:a9:f6:b5:a1:7b:6b:55:ee:b6:9b:2c:cb:
+                    ed:22:8a:14:8b:da:7f:81:ab:6e:b0:a9:29:4b:c9:
+                    23:ed:0c:6a:36:05:df:80:a6:db:a3:86:e6:89:aa:
+                    96:77:f0:33:2c:ae:a5:32:e6:aa:36:59:ea:d6:3c:
+                    da:75:bf:9c:7c:ad:58:94:fb:b9:c1:00:7c:a2:0f:
+                    f7:0a:6f:ee:60:fe:e0:c6:ed:83:83:e5:96:78:ab:
+                    7a:da:7a:c4:5f:69:79:9a:af:e2:6c:a0:e4:36:26:
+                    36:68:1a:59:c9:93:e6:7c:fb:66:45:89:ef:42:de:
+                    5b:a5:38:05:c3:14:19:9a:60:4b:8f:8d:08:a1:bc:
+                    5f:b5
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Subject Key Identifier: 
+                AA:6B:40:8A:BF:60:D9:8D:42:64:8B:BB:A0:33:0B:A5:28:B9:89:8B
+            X509v3 Authority Key Identifier: 
+                keyid:9D:66:3A:6D:6A:57:C6:A8:99:93:94:DB:0F:B0:7E:14:92:CC:FB:7C
+                DirName:/CN=cn_xRXrBPB6gUDndMgQ
+                serial:AC:C4:2A:D8:27:56:C4:69
+
+            X509v3 Extended Key Usage: 
+                TLS Web Client Authentication
+            X509v3 Key Usage: 
+                Digital Signature
+    Signature Algorithm: sha256WithRSAEncryption
+         61:b3:40:81:b2:15:42:8b:39:02:91:65:12:8d:67:dc:7c:47:
+         79:dc:48:2f:e6:09:0a:c8:5c:a5:c7:ca:ef:a9:1e:e3:af:32:
+         bd:7b:ce:59:db:a8:21:2b:57:b3:32:69:0b:9a:72:cd:bd:bd:
+         0d:df:38:75:f1:bc:75:44:04:08:7f:95:97:19:b8:d8:4d:3e:
+         d2:0d:7c:27:f1:46:c3:6d:c9:aa:02:95:16:b0:e2:ba:df:3e:
+         89:74:62:d1:2c:1e:2b:74:f4:f4:bd:7a:6f:ee:fd:fe:72:10:
+         35:0c:38:b2:12:17:33:ff:9e:73:5a:8a:2d:ad:a7:cf:c4:c5:
+         30:5e:50:ba:af:b4:a3:27:e6:4c:12:90:74:48:08:ce:f1:0d:
+         c6:fa:99:13:97:c1:ec:16:d3:ed:8e:70:62:86:59:78:1b:1c:
+         f9:e6:f7:f7:9a:74:7c:81:55:f6:4d:7b:f4:10:53:35:85:0f:
+         6f:e3:dc:c7:c5:7d:b1:e0:90:57:0b:59:63:54:2f:d3:d1:3b:
+         76:a6:36:9f:14:ed:a1:08:97:fc:57:c7:f0:fc:ee:f5:03:b7:
+         28:cf:b0:6d:26:d2:fd:0c:79:6f:56:45:d9:df:5f:3b:64:b6:
+         78:24:f5:94:17:a7:7b:40:b1:83:4d:48:32:8e:6b:50:a4:0f:
+         60:94:0c:2c
+-----BEGIN CERTIFICATE-----
+MIIDWDCCAkCgAwIBAgIQZHg79KGGFTEzND6c9tyvszANBgkqhkiG9w0BAQsFADAe
+MRwwGgYDVQQDFBNjbl94UlhyQlBCNmdVRG5kTWdRMB4XDTE4MDkxMTAzMzc1MFoX
+DTI4MDkwODAzMzc1MFowEDEOMAwGA1UEAxMFZHJpZnQwggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQC2xGsTz7cKpoqYXTFrX4gLHCiAl1RhR/6851r49C2k
+Xb12Jb7STPVhsbwL+AvMPbx3ldc3FVeYt0cVYOWhxmovZPNyUpv7pIhvWZp0QS7S
+tlJQWo7EGaeAvZc2+XG9TGvkEmGLo0QOSVOIIxJHOvGYZB2bTAx/0EXXf6n2taF7
+a1Xutpssy+0iihSL2n+Bq26wqSlLySPtDGo2Bd+AptujhuaJqpZ38DMsrqUy5qo2
+WerWPNp1v5x8rViU+7nBAHyiD/cKb+5g/uDG7YOD5ZZ4q3raesRfaXmar+JsoOQ2
+JjZoGlnJk+Z8+2ZFie9C3lulOAXDFBmaYEuPjQihvF+1AgMBAAGjgZ8wgZwwCQYD
+VR0TBAIwADAdBgNVHQ4EFgQUqmtAir9g2Y1CZIu7oDMLpSi5iYswTgYDVR0jBEcw
+RYAUnWY6bWpXxqiZk5TbD7B+FJLM+3yhIqQgMB4xHDAaBgNVBAMUE2NuX3hSWHJC
+UEI2Z1VEbmRNZ1GCCQCsxCrYJ1bEaTATBgNVHSUEDDAKBggrBgEFBQcDAjALBgNV
+HQ8EBAMCB4AwDQYJKoZIhvcNAQELBQADggEBAGGzQIGyFUKLOQKRZRKNZ9x8R3nc
+SC/mCQrIXKXHyu+pHuOvMr17zlnbqCErV7MyaQuacs29vQ3fOHXxvHVEBAh/lZcZ
+uNhNPtINfCfxRsNtyaoClRaw4rrfPol0YtEsHit09PS9em/u/f5yEDUMOLISFzP/
+nnNaii2tp8/ExTBeULqvtKMn5kwSkHRICM7xDcb6mROXwewW0+2OcGKGWXgbHPnm
+9/eadHyBVfZNe/QQUzWFD2/j3MfFfbHgkFcLWWNUL9PRO3amNp8U7aEIl/xXx/D8
+7vUDtyjPsG0m0v0MeW9WRdnfXztktngk9ZQXp3tAsYNNSDKOa1CkD2CUDCw=
+-----END CERTIFICATE-----
+</cert>
+<key>
+EOF9
+ cat <<'EOF10'> /etc/openvpn/server.key
+-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC2xGsTz7cKpoqY
+XTFrX4gLHCiAl1RhR/6851r49C2kXb12Jb7STPVhsbwL+AvMPbx3ldc3FVeYt0cV
+YOWhxmovZPNyUpv7pIhvWZp0QS7StlJQWo7EGaeAvZc2+XG9TGvkEmGLo0QOSVOI
+IxJHOvGYZB2bTAx/0EXXf6n2taF7a1Xutpssy+0iihSL2n+Bq26wqSlLySPtDGo2
+Bd+AptujhuaJqpZ38DMsrqUy5qo2WerWPNp1v5x8rViU+7nBAHyiD/cKb+5g/uDG
+7YOD5ZZ4q3raesRfaXmar+JsoOQ2JjZoGlnJk+Z8+2ZFie9C3lulOAXDFBmaYEuP
+jQihvF+1AgMBAAECggEAVO9Cs5o7/f8XOWdVqAhlOISFbfzlga/ree4qILeY3mGR
+wm4YF7Mb9aKbORS0pt2p0AkaUsbgRmAl8JFvJZcHka7gU6iARJlZriV92bjRAaso
+5Z6v6gHiDboNo8aYTNhO61Z/bl0ZK2p4HzPtMpz52U/tUlYtGNi5HER/v974hFm7
+KjIAkxgUe03XIKEjJGAN35Ojz3It67P5tocND4lhAyEE4su0IXSA4VJaSugl9qfU
+Y5b3Vt04zYneznjHPIQQ79KTsM2JiWeR+O7mB3p9osfT31NC7rfyDT8LLUStM1Rs
+DcNnQGQj6kdjzRE/rNHQxa6wZTX42v5nC3pSeqa4oQKBgQDvWfjaczbrOS0dRafd
+pGlfQu/4rbxnpZlE3/UlMOm8sKU0NmNhB/DN28p9ilscTlGltJnRg6EVQ8iOCp4V
+7r5IDWxL0IuHibvvsB0ogwQ/8zdN/bi3VoBm2ZIffHYvXbIJZyhbLZKVHWD/T1qd
+UWPtz6HAoKk3gsFdt9Y3XMQb/wKBgQDDeuA521VUmAuDJ95GomRnQMqT6WFrIfqH
+5UoxE8UNF0+kLACcaavbwH1xLgFKzm5BIp4IwyTrU4AFtntQZMG489P895QoyHVY
+xqasLmaBpeMSpOKUC5N257SWYtHsQUZAwVYllE+N6CYnCrgfdXd9kuKKoe1JXyzd
+fITfNufUSwKBgQCZmUp6nZ9rukh6VX4RXXYFnQY0twGGHh5KtdIy6L3GyjFqXVDP
+LvJYmSjMAaLQem4pAcoISwlvhQ1KIgQrHQfdY0fRK2avNzN08Lb1jYaHp4QhN6Z3
+eTpzRkJglFWftegP4rRiNs+vg6gAj6Md++I99ZXe8PtG1VFT3CrLYmuzbwKBgQCm
+HKWsJKlHYIjv5BIrfdXKNDGxLXIeQtqNXpgESmN5s2R3Avll8RocfF9crRZmBjOE
+4DDhC0s1OlihAieZ8nT4gSKUZaKeYXHuhaieyjNLWrcyYbE00v113oIEBWeT1wgn
+AOP+vSA5W5wIM0CxYvWuXQJrghyM6/bJJAYZVKP+LwKBgCV7EpLulYCTURahwhuL
+WXGMSBhj4GK4yEMdQ/m56N5HT42Ho7RK+JdvuSrCD0Z71kyF0a2b402qAzq0dbUd
+Jw4lcZj+0EasNXcArUb0lhF3JGmDGa32khIR6VOHCwiO/gbq7LEJpic7PiWStJ+l
+wxppGVkDJWhJCmOH4KhG9tih
+-----END PRIVATE KEY-----
+</key>
+<tls-auth>
+EOF10
+ cat <<'EOF18'> /etc/openvpn/ta.key
+#
+# 2048 bit OpenVPN static key
+#
+-----BEGIN OpenVPN Static key V1-----
+6a8c06aea6f50e0b6bc9310a0049575f
+e143c18d1700545fe027028ca7164c85
+da9075614a69785974f257a67ec13e9c
+2146307d3d11cd59b29460e2fd7803e8
+8c9afec1cf8af1f7a8aa557092715d48
+2a6a233eef42762b0ba6a6193f8e755f
+720dedb8db20a169d19316070f66fe73
+a6b30c06704c8b7bb73e47d8dcb7c330
+0e77dbd9983448c6c5ae39c007dfb9a1
+0de9e1c5e678bc4e9d0b9d7bdadb5467
+85a659f5602622d8902c88575e9446d6
+ca8c20ca68c7480332c5cf45d37f19ec
+4dfc5d03b71cfdcf6adce6c9a1a7ac97
+8059830b9fb32e89d254d6fd3e4131f9
+1715ba4ffe8f09745c140f19c15e0dfd
+227919eb22509c8bc129a97153d9a226
+-----END OpenVPN Static key V1-----
+EOF18
+ cat <<'EOF13'> /etc/openvpn/dh2048.pem
+-----BEGIN DH PARAMETERS-----
+MIIBCAKCAQEAxoNLELO1dQDFW0ZRRbPG9Cv1ifPSqGQB0tIusmTrn22nMqND06fK
+NfJNQhnEahwYlbA2DEXxjZ7gpXWA6mrKUIVTFfnFohmHhLgkb9QUc0m5LwVgcd/w
+25s+3JEcV3MJ70Cf64wG+KVHMJeISagDlKlE+2f7MJkkSV1vgvfQOpnVp+DF38tL
+L57p4njl0n61NNUnbvH0YEPbvKPk0CJ3EGGQE/uhwKIU+pJt/o9S0wppq9sUrOuD
+1eelmMZPuWH3aSVIUqiucEsczGn5GfqIc2KNHAMfJ5JhLOjjJvb1cewD2DpIiI2I
+bVexIf9WpjXw+LZrjSifNgQ1Eqfdd3tDiwIBAg==
+-----END DH PARAMETERS-----
+EOF13
+
+ # Getting all dns inside resolv.conf then use as Default DNS for our openvpn server
+ #grep -v '#' /etc/resolv.conf | grep 'nameserver' | grep -E -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | while read -r line; do
+	#echo "push \"dhcp-option DNS $line\"" >> /etc/openvpn/server_tcp.conf
+#done
+ #grep -v '#' /etc/resolv.conf | grep 'nameserver' | grep -E -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | while read -r line; do
+	#echo "push \"dhcp-option DNS $line\"" >> /etc/openvpn/server_udp.conf
+#done
+
+ # setting openvpn server port
+ sed -i "s|MyOvpnPort1|$OpenVPN_Port1|g" /etc/openvpn/server_tcp.conf
+ sed -i "s|MyOvpnPort2|$OpenVPN_Port2|g" /etc/openvpn/server_udp.conf
+ 
+ # Generating openvpn dh.pem file using openssl
+ #openssl dhparam -out /etc/openvpn/dh.pem 1024
+ 
+ # Getting some OpenVPN plugins for unix authentication
+ wget -qO /etc/openvpn/b.zip 'https://raw.githubusercontent.com/Bonveio/BonvScripts/master/openvpn_plugin64'
+ unzip -qq /etc/openvpn/b.zip -d /etc/openvpn
+ rm -f /etc/openvpn/b.zip
+ 
+ # Some workaround for OpenVZ machines for "Startup error" openvpn service
+ if [[ "$(hostnamectl | grep -i Virtualization | awk '{print $2}' | head -n1)" == 'openvz' ]]; then
+ sed -i 's|LimitNPROC|#LimitNPROC|g' /lib/systemd/system/openvpn*
+ systemctl daemon-reload
+fi
+
+ # Allow IPv4 Forwarding
+ echo 'net.ipv4.ip_forward=1' > /etc/sysctl.d/20-openvpn.conf && sysctl --system &> /dev/null && echo 1 > /proc/sys/net/ipv4/ip_forward
+
+ # Iptables Rule for OpenVPN server
+ #PUBLIC_INET="$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)"
+ #IPCIDR='10.200.0.0/16'
+ #iptables -I FORWARD -s $IPCIDR -j ACCEPT
+ #iptables -t nat -A POSTROUTING -o $PUBLIC_INET -j MASQUERADE
+ #iptables -t nat -A POSTROUTING -s $IPCIDR -o $PUBLIC_INET -j MASQUERADE
+ 
+ # Installing Firewalld
+ apt install firewalld -y
+ systemctl start firewalld
+ systemctl enable firewalld
+ firewall-cmd --quiet --set-default-zone=public
+ firewall-cmd --quiet --zone=public --permanent --add-port=1-65534/tcp
+ firewall-cmd --quiet --zone=public --permanent --add-port=1-65534/udp
+ firewall-cmd --quiet --reload
+ firewall-cmd --quiet --add-masquerade
+ firewall-cmd --quiet --permanent --add-masquerade
+ firewall-cmd --quiet --permanent --add-service=ssh
+ firewall-cmd --quiet --permanent --add-service=openvpn
+ firewall-cmd --quiet --permanent --add-service=http
+ firewall-cmd --quiet --permanent --add-service=https
+ firewall-cmd --quiet --permanent --add-service=privoxy
+ firewall-cmd --quiet --permanent --add-service=squid
+ firewall-cmd --quiet --reload
+ 
+ # Enabling IPv4 Forwarding
+ echo 1 > /proc/sys/net/ipv4/ip_forward
+ 
+ # Starting OpenVPN server
+ systemctl start openvpn@server_tcp
+ systemctl start openvpn@server_udp
+ systemctl enable openvpn@server_tcp
+ systemctl enable openvpn@server_udp
+ systemctl restart openvpn@server_tcp
+ systemctl restart openvpn@server_udp
+ 
+ # Pulling OpenVPN no internet fixer script
+ #wget -qO /etc/openvpn/openvpn.bash "https://raw.githubusercontent.com/Bonveio/BonvScripts/master/openvpn.bash"
+ #0chmod +x /etc/openvpn/openvpn.bash
+}
+
+function InsProxy(){
+ # Removing Duplicate privoxy config
+ rm -rf /etc/privoxy/config*
+ 
+ # Creating Privoxy server config using cat eof tricks
+ cat <<'myPrivoxy' > /etc/privoxy/config
+# My Privoxy Server Config
+user-manual /usr/share/doc/privoxy/user-manual
+confdir /etc/privoxy
+logdir /var/log/privoxy
+filterfile default.filter
+logfile logfile
+listen-address 0.0.0.0:Privoxy_Port1
+listen-address 0.0.0.0:Privoxy_Port2
+toggle 1
+enable-remote-toggle 0
+enable-remote-http-toggle 0
+enable-edit-actions 0
+enforce-blocks 0
+buffer-limit 4096
+enable-proxy-authentication-forwarding 1
+forwarded-connect-retries 1
+accept-intercepted-requests 1
+allow-cgi-request-crunching 1
+split-large-forms 0
+keep-alive-timeout 5
+tolerate-pipelining 1
+socket-timeout 300
+permit-access 0.0.0.0/0 IP-ADDRESS
+myPrivoxy
+
+ # Setting machine's IP Address inside of our privoxy config(security that only allows this machine to use this proxy server)
+ sed -i "s|IP-ADDRESS|$IPADDR|g" /etc/privoxy/config
+ 
+ # Setting privoxy ports
+ sed -i "s|Privoxy_Port1|$Privoxy_Port1|g" /etc/privoxy/config
+ sed -i "s|Privoxy_Port2|$Privoxy_Port2|g" /etc/privoxy/config
+
+ # I'm setting Some Squid workarounds to prevent Privoxy's overflowing file descriptors that causing 50X error when clients trying to connect to your proxy server(thanks for this trick @homer_simpsons)
+ apt remove --purge squid -y
+ rm -rf /etc/squid/sq*
+ apt install squid -y
+ 
+# Squid Ports (must be 1024 or higher)
+ Proxy_Port='8000'
+ cat <<mySquid > /etc/squid/squid.conf
+acl VPN dst $(wget -4qO- http://ipinfo.io/ip)/32
+http_access allow VPN
+http_access deny all 
+http_port 0.0.0.0:$Proxy_Port
+coredump_dir /var/spool/squid
+dns_nameservers 1.1.1.1 1.0.0.1
+refresh_pattern ^ftp: 1440 20% 10080
+refresh_pattern ^gopher: 1440 0% 1440
+refresh_pattern -i (/cgi-bin/|\?) 0 0% 0
+refresh_pattern . 0 20% 4320
+visible_hostname localhost
+mySquid
+
+ sed -i "s|SquidCacheHelper|$Privoxy_Port1|g" /etc/squid/squid.conf
+
+ # Starting Proxy server
+ echo -e "Restarting proxy server.."
+ systemctl restart privoxy
+ systemctl restart squid
+}
+
+function OvpnConfigs(){
+ # Creating nginx config for our ovpn config downloads webserver
+ cat <<'myNginxC' > /etc/nginx/conf.d/bonveio-ovpn-config.conf
+# My OpenVPN Config Download Directory
+server {
+ listen 0.0.0.0:myNginx;
+ server_name localhost;
+ root /var/www/openvpn;
+ index index.html;
+}
+myNginxC
+
+ # Setting our nginx config port for .ovpn download site
+ sed -i "s|myNginx|$OvpnDownload_Port|g" /etc/nginx/conf.d/bonveio-ovpn-config.conf
+
+ # Removing Default nginx page(port 80)
+ rm -rf /etc/nginx/sites-*
+
+ # Creating our root directory for all of our .ovpn configs
+ rm -rf /var/www/openvpn
+ mkdir -p /var/www/openvpn
+
+ # Now creating all of our OpenVPN Configs 
+cat <<EOF152> /var/www/openvpn/GTMConfig.ovpn
+# Credits to GakodX
+client
+dev tun
+proto tcp
+remote $IPADDR $OpenVPN_Port1
+remote-cert-tls server
+resolv-retry infinite
+nobind
+tun-mtu 1500
+tun-mtu-extra 32
+mssfix 1450
+persist-key
+persist-tun
+auth-user-pass
+auth none
+auth-nocache
+cipher none
+keysize 0
+comp-lzo
+setenv CLIENT_CERT 0
+reneg-sec 0
+verb 1
+http-proxy $(curl -s http://ipinfo.io/ip || wget -q http://ipinfo.io/ip) $Proxy_Port
+http-proxy-option CUSTOM-HEADER Host redirect.googlevideo.com
+http-proxy-option CUSTOM-HEADER X-Forwarded-For redirect.googlevideo.com
+
+<auth-user-pass>
+sam
+sam
+</auth-user-pass>
+<ca>
+$(cat /etc/openvpn/ca.crt)
+$(cat /etc/openvpn/server.crt)
+$(cat /etc/openvpn/server.key)
+$(cat /etc/openvpn/ta.key)
+</tls-auth>
+EOF152
+
+cat <<EOF16> /var/www/openvpn/SunConfig.ovpn
+# Credits to GakodX
+client
+dev tun
+proto udp
+remote $IPADDR $OpenVPN_Port2
+remote-cert-tls server
+resolv-retry infinite
+nobind
+tun-mtu 1500
+tun-mtu-extra 32
+mssfix 1450
+persist-key
+persist-tun
+auth-user-pass
+auth none
+auth-nocache
+cipher none
+keysize 0
+comp-lzo
+setenv CLIENT_CERT 0
+reneg-sec 0
+verb 1
+
+<auth-user-pass>
+sam
+sam
+</auth-user-pass>
+<ca>
+$(cat /etc/openvpn/ca.crt)
+$(cat /etc/openvpn/server.crt)
+$(cat /etc/openvpn/server.key)
+$(cat /etc/openvpn/ta.key)
+</tls-auth>
+EOF16
+
+cat <<EOF160> /var/www/openvpn/GStories.ovpn
+# Credits to GakodX
+client
+dev tun
+proto tcp
+remote $IPADDR $OpenVPN_Port1
+remote-cert-tls server
+resolv-retry infinite
+nobind
+tun-mtu 1500
+tun-mtu-extra 32
+mssfix 1450
+persist-key
+persist-tun
+auth-user-pass
+auth none
+auth-nocache
+cipher none
+keysize 0
+comp-lzo
+setenv CLIENT_CERT 0
+reneg-sec 0
+verb 1
+http-proxy $(curl -s http://ipinfo.io/ip || wget -q http://ipinfo.io/ip) $Proxy_Port
+http-proxy-option CUSTOM-HEADER Host tweetdeck.twitter.com
+http-proxy-option CUSTOM-HEADER X-Forwarded-For tweetdeck.twitter.com
+
+<auth-user-pass>
+sam
+sam
+</auth-user-pass>
+<ca>
+$(cat /etc/openvpn/ca.crt)
+$(cat /etc/openvpn/server.crt)
+$(cat /etc/openvpn/server.key)
+$(cat /etc/openvpn/ta.key)
+</tls-auth>
+EOF160
+
+cat <<EOF17> /var/www/openvpn/SunNoLoad.ovpn
+client
+dev tun
+proto tcp-client
+remote $IPADDR $OpenVPN_Port1
+remote-cert-tls server
+bind
+float
+tun-mtu 1500
+tun-mtu-extra 32
+mssfix 1450
+mute-replay-warnings
+connect-retry-max 9999
+redirect-gateway def1
+connect-retry 0 1
+resolv-retry infinite
+setenv CLIENT_CERT 0
+persist-tun
+persist-key
+auth-user-pass
+auth none
+auth-nocache
+auth-retry interact
+cipher none
+keysize 0
+comp-lzo
+reneg-sec 0
+verb 0
+nice -20
+log /dev/null
+<auth-user-pass>
+sam
+sam
+</auth-user-pass>
+<ca>
+$(cat /etc/openvpn/ca.crt)
+$(cat /etc/openvpn/server.crt)
+$(cat /etc/openvpn/server.key)
+$(cat /etc/openvpn/ta.key)
+</tls-auth>
+EOF17
+
+ # Creating OVPN download site index.html
+cat <<'mySiteOvpn' > /var/www/openvpn/index.html
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- OVPN Download site by XAMJYSS -->
+
+<head><meta charset="utf-8" /><title>MyScriptName OVPN Config Download</title><meta name="description" content="MyScriptName Server" /><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" /><meta name="theme-color" content="#000000" /><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css"><link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.8.3/css/mdb.min.css" rel="stylesheet"></head><body><div class="container justify-content-center" style="margin-top:9em;margin-bottom:5em;"><div class="col-md"><div class="view"><img src="https://openvpn.net/wp-content/uploads/openvpn.jpg" class="card-img-top"><div class="mask rgba-white-slight"></div></div><div class="card"><div class="card-body"><h5 class="card-title">Config List</h5><br /><ul class="list-group"><li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p>For Globe/TM <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small> For EZ/GS Promo with WNP freebies</small></p><a class="btn btn-outline-success waves-effect btn-sm" href="http://IP-ADDRESS:NGINXPORT/GTMConfig.ovpn" style="float:right;"><i class="fa fa-download"></i> Download</a></li><li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p>For Sun <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small> For TU UDP Promos</small></p><a class="btn btn-outline-success waves-effect btn-sm" href="http://IP-ADDRESS:NGINXPORT/SunConfig.ovpn" style="float:right;"><i class="fa fa-download"></i> Download</a></li><li class="list-group-item justify-content-between align-items-center" style="margin-bottom:1em;"><p>For Sun <span class="badge light-blue darken-4">Android/iOS/PC/Modem</span><br /><small> Trinet GIGASTORIES Promos</small></p><a class="btn btn-outline-success waves-effect btn-sm" href="http://IP-ADDRESS:NGINXPORT/GStories.ovpn" style="float:right;"><i class="fa fa-download"></i> Download</a></li></ul></div></div></div></div></body></html>
+mySiteOvpn
+ 
+ # Setting template's correct name,IP address and nginx Port
+ sed -i "s|MyScriptName|$MyScriptName|g" /var/www/openvpn/index.html
+ sed -i "s|NGINXPORT|$OvpnDownload_Port|g" /var/www/openvpn/index.html
+ sed -i "s|IP-ADDRESS|$IPADDR|g" /var/www/openvpn/index.html
+
+ # Restarting nginx service
+ systemctl restart nginx
+ 
+ # Creating all .ovpn config archives
+ cd /var/www/openvpn
+ zip -qq -r Configs.zip *.ovpn
+ cd
+}
+
+function ip_address(){
+  local IP="$( ip addr | egrep -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | egrep -v "^192\.168|^172\.1[6-9]\.|^172\.2[0-9]\.|^172\.3[0-2]\.|^10\.|^127\.|^255\.|^0\." | head -n 1 )"
+  [ -z "${IP}" ] && IP="$( wget -qO- -t1 -T2 ipv4.icanhazip.com )"
+  [ -z "${IP}" ] && IP="$( wget -qO- -t1 -T2 ipinfo.io/ip )"
+  [ ! -z "${IP}" ] && echo "${IP}" || echo
+} 
+IPADDR="$(ip_address)"
+
+function ConfStartup(){
+ # Daily reboot time of our machine
+ # For cron commands, visit https://crontab.guru
+ echo -e "0 4\t* * *\troot\treboot" > /etc/cron.d/b_reboot_job
+
+ # Creating directory for startup script
+ rm -rf /etc/barts
+ mkdir -p /etc/barts
+ chmod -R 755 /etc/barts
+ 
+ # Creating startup script using cat eof tricks
+ cat <<'EOFSH' > /etc/barts/startup.sh
+#!/bin/bash
+# Setting server local time
+ln -fs /usr/share/zoneinfo/MyVPS_Time /etc/localtime
+
+# Prevent DOS-like UI when installing using APT (Disabling APT interactive dialog)
+export DEBIAN_FRONTEND=noninteractive
+
+# Allowing ALL TCP ports for our machine (Simple workaround for policy-based VPS)
+iptables -A INPUT -s $(wget -4qO- http://ipinfo.io/ip) -p tcp -m multiport --dport 1:65535 -j ACCEPT
+
+# Allowing OpenVPN to Forward traffic
+/bin/bash /etc/openvpn/openvpn.bash
+
+# Deleting Expired SSH Accounts
+/usr/local/sbin/delete_expired &> /dev/null
+EOFSH
+ chmod +x /etc/barts/startup.sh
+ 
+ # Setting server local time every time this machine reboots
+ sed -i "s|MyVPS_Time|$MyVPS_Time|g" /etc/barts/startup.sh
+
+ # 
+ rm -rf /etc/sysctl.d/99*
+
+ # Setting our startup script to run every machine boots 
+ echo "[Unit]
+Description=Barts Startup Script
+Before=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /etc/barts/startup.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/barts.service
+ chmod +x /etc/systemd/system/barts.service
+ systemctl daemon-reload
+ systemctl start barts
+ systemctl enable barts &> /dev/null
+
+ # Rebooting cron service
+ systemctl restart cron
+ systemctl enable cron
+ 
+}
+
+function ConfMenu(){
+echo -e " Creating Menu scripts.."
+
+cd /usr/local/sbin/
+rm -rf {accounts,base-ports,base-ports-wc,base-script,bench-network,clearcache,connections,create,create_random,create_trial,delete_expired,diagnose,edit_dropbear,edit_openssh,edit_openvpn,edit_ports,edit_squid3,edit_stunnel4,locked_list,menu,options,ram,reboot_sys,reboot_sys_auto,restart_services,server,set_multilogin_autokill,set_multilogin_autokill_lib,show_ports,speedtest,user_delete,user_details,user_details_lib,user_extend,user_list,user_lock,user_unlock}
+wget -q 'https://raw.githubusercontent.com/Barts-23/menu1/master/menu.zip'
+unzip -qq menu.zip
+rm -f menu.zip
+chmod +x ./*
+dos2unix ./* &> /dev/null
+sed -i 's|/etc/squid/squid.conf|/etc/privoxy/config|g' ./*
+sed -i 's|http_port|listen-address|g' ./*
+cd ~
+
+echo 'clear' > /etc/profile.d/barts.sh
+echo 'echo '' > /var/log/syslog' >> /etc/profile.d/barts.sh
+echo 'screenfetch -p -A Android' >> /etc/profile.d/barts.sh
+chmod +x /etc/profile.d/barts.sh
+}
+
+function ScriptMessage(){
+ echo -e " (ÃƒÂ¯Ã‚Â½Ã‚Â¡ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¿ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â¢ÃƒÂ¯Ã‚Â½Ã‚Â¡) $MyScriptName Debian VPS Installer"
+ echo -e " Open release version"
+ echo -e ""
+ echo -e " Script created by Bonveio"
+ echo -e " Edited by XAMJYSS"
+}
+
+
+#############################
+#############################
+## Installation Process
+#############################
+## WARNING: Do not modify or edit anything
+## if you did'nt know what to do.
+## This part is too sensitive.
+#############################
+#############################
+
+ # (For OpenVPN) Checking it this machine have TUN Module, this is the tunneling interface of OpenVPN server
+ if [[ ! -e /dev/net/tun ]]; then
+ echo -e "[\e[1;31mÃƒÆ’Ã¢â‚¬â€\e[0m] You cant use this script without TUN Module installed/embedded in your machine, file a support ticket to your machine admin about this matter"
+ echo -e "[\e[1;31m-\e[0m] Script is now exiting..."
+ exit 1
+fi
+
+ # Begin Installation by Updating and Upgrading machine and then Installing all our wanted packages/services to be install.
+ ScriptMessage
+ sleep 2
+ InstUpdates
+ 
+ # Configure OpenSSH and Dropbear
+ echo -e "Configuring ssh..."
+ InstSSH
+ 
+ # Configure Stunnel
+ echo -e "Configuring stunnel..."
+ InsStunnel
+ 
+ # Configure Webmin
+ echo -e "Configuring webmin..."
+ InstWebmin
+ 
+ # Configure Privoxy and Squid
+ echo -e "Configuring proxy..."
+ InsProxy
+ 
+ # Configure OpenVPN
+ echo -e "Configuring OpenVPN..."
+ InsOpenVPN
+ 
+ # Configuring Nginx OVPN config download site
+ OvpnConfigs
+
+ # Some assistance and startup scripts
+ ConfStartup
+
+ # VPS Menu script v1.0
+ ConfMenu
+ 
+ # Setting server local time
+ ln -fs /usr/share/zoneinfo/$MyVPS_Time /etc/localtime
+ 
+ clear
+ cd ~
+
+ # Running sysinfo 
+ bash /etc/profile.d/barts.sh
+ 
+ # Showing script's banner message
+ ScriptMessage
+ 
+ # Showing additional information from installating this script
+ echo -e ""
+ echo -e " Success Installation"
+ echo -e ""
+ echo -e " Service Ports: "
+ echo -e " OpenSSH: $SSH_Port1, $SSH_Port2"
+ echo -e " Stunnel: $Stunnel_Port1, $Stunnel_Port2"
+ echo -e " DropbearSSH: $Dropbear_Port1, $Dropbear_Port2"
+ echo -e " Privoxy: $Privoxy_Port1, $Privoxy_Port2"
+ echo -e " Squid: $Proxy_Port"
+ echo -e " OpenVPN: $OpenVPN_Port1, $OpenVPN_Port2"
+ echo -e " NGiNX: $OvpnDownload_Port"
+ echo -e " Webmin: 10000"
+ #echo -e " L2tp IPSec Key: xjvpn13"
+ echo -e ""
+ echo -e ""
+ echo -e " OpenVPN Configs Download site"
+ echo -e " http://$IPADDR:$OvpnDownload_Port"
+ echo -e ""
+ echo -e " All OpenVPN Configs Archive"
+ echo -e " http://$IPADDR:$OvpnDownload_Port/Configs.zip"
+ echo -e ""
+ echo -e ""
+ echo -e " [Note] DO NOT RESELL THIS SCRIPT"
+
+ # Clearing all logs from installation
+ rm -rf /root/.bash_history && history -c && echo '' > /var/log/syslog
+
+rm -f 443all*
+exit 1
