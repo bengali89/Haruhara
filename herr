@@ -251,6 +251,10 @@ function InsOpenVPN(){
   mkdir -p /etc/openvpn
  fi
 
+ # Generate key for tls-auth
+ openvpn --genkey --secret /etc/openvpn/ta.key
+
+
  # Removing all existing openvpn server files
  rm -rf /etc/openvpn/*
 
