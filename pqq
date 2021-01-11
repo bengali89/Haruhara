@@ -1,0 +1,162 @@
+#!/bin/bash
+#
+# Original script by fornesia, rzengineer and fawzya
+# Mod by admin Hidessh
+# ==================================================
+
+# initialisasi var
+export DEBIAN_FRONTEND=noninteractive
+OS=`uname -m`;
+MYIP=$(wget -qO- ipv4.icanhazip.com);
+MYIP2="s/xxxxxxxxx/$MYIP/g";
+
+# set time GMT +7
+ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+
+# disable ipv6
+echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+sed -i '$ i\echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6' /etc/rc.local
+
+# update repository
+apt update -y
+
+# Install PHP 5.6
+apt-get install sudo -y
+usermod -aG sudo root
+
+sudo apt -y install ca-certificates apt-transport-https
+wget -q https://packages.sury.org/php/apt.gpg -O- | sudo apt-key add -
+echo "deb https://packages.sury.org/php/ stretch main" | sudo tee /etc/apt/sources.list.d/php.list
+
+sudo apt update -y
+sudo apt install php5.6 -y
+sudo apt install php5.6-mcrypt php5.6-mysql php5.6-fpm php5.6-cli php5.6-common php5.6-curl php5.6-mbstring php5.6-mysqlnd php5.6-xml -y
+
+# install webserver
+cd
+sudo apt-get -y install nginx
+rm /etc/nginx/sites-enabled/default
+rm /etc/nginx/sites-available/default
+wget -O /etc/nginx/nginx.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/nginx-default.conf"
+mkdir -p /home/vps/public_html
+echo "<?php phpinfo() ?>" > /home/vps/public_html/info.php
+wget -O /etc/nginx/conf.d/vps.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/vhost-nginx.conf"
+/etc/init.d/nginx restart
+
+# instal nginx php5.6 
+apt-get -y install nginx php5.6-fpm
+apt-get -y install nginx php5.6-cli
+apt-get -y install nginx php5.6-mysql
+apt-get -y install nginx php5.6-mcrypt
+sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/5.6/cli/php.ini
+
+# cari config php fpm dengan perintah berikut "php --ini |grep Loaded"
+sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/5.6/cli/php.ini
+
+# Cari config php fpm www.conf dengan perintah berikut "find / \( -iname "php.ini" -o -name "www.conf" \)"
+sed -i 's/listen = \/run\/php\/php5.6-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/5.6/fpm/pool.d/www.conf
+cd
+
+
+# Edit port apache2 ke 8090
+wget -O /etc/apache2/ports.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/apache2.conf"
+
+# Edit port virtualhost apache2 ke 8090
+wget -O /etc/apache2/sites-enabled/000-default.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/virtualhost.conf"
+
+# restart apache2
+/etc/init.d/apache2 restart
+
+#link download: https://raw.githubusercontent.com/cmaimu/debian7/master/installopenvpn.sh
+
+#cek ready tidak-nya
+cat /dev/net/tun
+
+#update
+apt-get update
+
+#install paket
+apt-get -y install openvpn
+apt-get -y install zip
+
+#Copy helper script
+cp -a /usr/share/doc/openvpn/examples/easy-rsa /etc/openvpn/
+
+#buat sertifikat
+cd /etc/openvpn/easy-rsa/2.0
+source ./vars
+./clean-all
+./build-ca
+
+#buat difle helman parameter
+./build-dh
+
+#generate sertifikat untuk server
+./build-key-server server01
+
+#Untuk menghindari UDP flood dan serangan DDoS maka jalankan: 
+openvpn --genkey --secret keys/ta.key
+
+#buat config server UDP dan TCP
+cd /etc/openvpn
+wget -O server-udp-1194.conf "https://raw.githubusercontent.com/cmaimu/debian7/master/server-udp-1194.conf"
+wget -O server-tcp-465.conf "https://raw.githubusercontent.com/cmaimu/debian7/master/server-tcp-465.conf"
+
+mkdir /etc/openvpn/keys
+
+cp /etc/openvpn/easy-rsa/2.0/keys/{ca.crt,server01.crt,server01.key,dh1024.pem,ta.key} /etc/openvpn/keys/
+
+#rubah config
+sed -i 's/#AUTOSTART="all"/AUTOSTART="all"/g' /etc/default/openvpn
+
+#restart openvpn
+service openvpn restart
+
+sysctl -w net.ipv4.ip_forward=1
+sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
+wget -O /etc/iptables.up.rules "https://raw.github.com/yurisshOS/debian7os/master/iptables.up.rules"
+sed -i '$ i\iptables-restore < /etc/iptables.up.rules' /etc/rc.local
+sed -i $MYIP2 /etc/iptables.up.rules;
+iptables-restore < /etc/iptables.up.rules
+service openvpn restart
+
+echo -n "Jenis virtualisasi apa? (1.OVZ 2.KVM/XEN)"
+read virtualisasi
+
+if [ "$virtualisasi" == 1 ]
+then
+#untuk OVZ
+#setting iptables jalur UDP
+iptables -t nat -I POSTROUTING -s 10.8.0.0/24 -o venet0 -j MASQUERADE
+#setting iptables jalur TCP
+iptables -t nat -I POSTROUTING -s 10.9.0.0/24 -o venet0 -j MASQUERADE
+elif [ "$virtualisasi" == 2 ]
+then
+#untuk KVM/XEN
+#setting iptables jalur UDP
+iptables -t nat -I POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+#setting iptables jalur TCP
+iptables -t nat -I POSTROUTING -s 10.9.0.0/24 -o eth0 -j MASQUERADE
+fi
+
+cd /etc/openvpn
+
+#setting untuk client
+echo -n "Tulis IP VPS-nya (contoh: 192.168.0.1):"
+read ipvps
+mkdir clientconfig
+cp /etc/openvpn/easy-rsa/2.0/keys/{ca.crt,ta.key} clientconfig/
+cd /etc/openvpn/clientconfig
+wget https://raw.githubusercontent.com/cmaimu/debian7/master/client-udp-1194.ovpn 
+wget https://raw.githubusercontent.com/cmaimu/debian7/master/client-tcp-465.ovpn
+sed -i "s/remote xxxxxxxxxxxx 1194/remote $ipvps 1194/g" client-udp-1194.ovpn
+sed -i "s/remote xxxxxxxxxxxx 465/remote $ipvps 465/g" client-tcp-465.ovpn
+
+
+zip client.zip *
+cp client.zip /home/vps/public_html/
+
+echo "Silahkan bagikan file client.zip pada membernya"
+
+#Modified by Ahmad Jibril
+#Source: ari-f.com
