@@ -259,40 +259,34 @@ function InsOpenVPN(){
 # XAMScript
 
 port MyOvpnPort1
-dev tun
 proto tcp
+dev tun
+dev-type tun
+sndbuf 100000
+rcvbuf 100000
+crl-verify crl.pem
 ca ca.crt
 cert server.crt
 key server.key
-duplicate-cn
-dh none
-persist-tun
-persist-key
-persist-remote-ip
-cipher none
-ncp-disable
-auth none
-comp-lzo
-tun-mtu 1500
-reneg-sec 0
-plugin /etc/openvpn/openvpn-auth-pam.so /etc/pam.d/login
-verify-client-cert none
-username-as-common-name
-max-clients 4000
+dh dh.pem
 topology subnet
-server 172.16.0.0 255.255.0.0
-push "redirect-gateway def1"
-keepalive 5 60
-status /etc/openvpn/tcp_stats.log
-log /etc/openvpn/tcp.log
-verb 2
-script-security 2
-socket-flags TCP_NODELAY
-push "socket-flags TCP_NODELAY"
-push "dhcp-option DNS 1.0.0.1"
-push "dhcp-option DNS 1.1.1.1"
-push "dhcp-option DNS 8.8.4.4"
+server 10.9.0.0 255.255.255.0
+ifconfig-pool-persist ipp.txt
+push "redirect-gateway def1 bypass-dhcp"
 push "dhcp-option DNS 8.8.8.8"
+push "dhcp-option DNS 8.8.4.4"
+keepalive 10 120
+cipher AES-256-CBC
+auth SHA256
+comp-lzo
+user nobody
+group nogroup
+persist-tun
+status openvpn-status.log
+verb 2
+mute 3
+plugin /etc/openvpn/openvpn-auth-pam.so /etc/pam.d/login
+username-as-common-name
 myOpenVPNconf1
 cat <<'myOpenVPNconf2' > /etc/openvpn/server_udp.conf
 # XAMScript
@@ -717,29 +711,30 @@ cat <<EOF152> /var/www/openvpn/GTMConfig.ovpn
 # Credits to GakodX
 client
 dev tun
-proto tcp
-remote $IPADDR $OpenVPN_Port1
-remote-cert-tls server
+remote $IPADDR $OpenVPN_Port1 tcp
+http-proxy-retry
+http-proxy $(curl -s http://ipinfo.io/ip || wget -q http://ipinfo.io/ip) $Proxy_Port
+resolv-retry infinite
+route-method exe
 resolv-retry infinite
 nobind
-tun-mtu 1500
-tun-mtu-extra 32
-mssfix 1450
 persist-key
 persist-tun
-auth-user-pass
-auth none
-auth-nocache
-cipher none
-keysize 0
 comp-lzo
-setenv CLIENT_CERT 0
-reneg-sec 0
-verb 1
-http-proxy $(curl -s http://ipinfo.io/ip || wget -q http://ipinfo.io/ip) $Proxy_Port
-http-proxy-option CUSTOM-HEADER Host redirect.googlevideo.com
-http-proxy-option CUSTOM-HEADER X-Forwarded-For redirect.googlevideo.com
-
+cipher AES-256-CBC
+auth SHA256
+push "redirect-gateway def1 bypass-dhcp"
+verb 3
+push-peer-info
+ping 10
+ping-restart 60
+hand-window 70
+server-poll-timeout 4
+reneg-sec 2592000
+sndbuf 100000
+rcvbuf 100000
+remote-cert-tls server
+key-direction 1
 <auth-user-pass>
 sam
 sam
