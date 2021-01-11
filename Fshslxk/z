@@ -92,7 +92,7 @@ sed -i "s/ipserver/$myip/g" /etc/squid3/squid.conf# openvpn
 #  openvpn
 apt-get -y install openvpn
 cd /etc/openvpn/
-wget -O openvpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/Bzbzn/openvpn.tar"
+wget -O openvpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/Fshslxk/openvpn.tar"
 tar xf openvpn.tar;rm openvpn.tar
 wget -O /etc/rc.local "https://raw.githubusercontent.com/guardeumvpn/Qwer77/master/rc.local"
 chmod +x /etc/rc.local
