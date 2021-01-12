@@ -1,0 +1,245 @@
+#!/bin/bash
+#
+# Original script by fornesia, rzengineer and fawzya
+# Mod by admin Hidessh
+# ==================================================
+
+# initialisasi var
+export DEBIAN_FRONTEND=noninteractive
+OS=`uname -m`;
+MYIP=$(wget -qO- ipv4.icanhazip.com);
+MYIP2="s/xxxxxxxxx/$MYIP/g";
+
+# set time GMT +7
+ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+
+# disable ipv6
+echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+sed -i '$ i\echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6' /etc/rc.local
+
+# update repository
+apt update -y
+
+# Install PHP 5.6
+apt-get install sudo -y
+usermod -aG sudo root
+
+sudo apt -y install ca-certificates apt-transport-https
+wget -q https://packages.sury.org/php/apt.gpg -O- | sudo apt-key add -
+echo "deb https://packages.sury.org/php/ stretch main" | sudo tee /etc/apt/sources.list.d/php.list
+
+sudo apt update -y
+sudo apt install php5.6 -y
+sudo apt install php5.6-mcrypt php5.6-mysql php5.6-fpm php5.6-cli php5.6-common php5.6-curl php5.6-mbstring php5.6-mysqlnd php5.6-xml -y
+
+# install webserver
+cd
+sudo apt-get -y install nginx
+rm /etc/nginx/sites-enabled/default
+rm /etc/nginx/sites-available/default
+wget -O /etc/nginx/nginx.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/nginx-default.conf"
+mkdir -p /home/vps/public_html
+echo "<?php phpinfo() ?>" > /home/vps/public_html/info.php
+wget -O /etc/nginx/conf.d/vps.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/vhost-nginx.conf"
+/etc/init.d/nginx restart
+
+# instal nginx php5.6 
+apt-get -y install nginx php5.6-fpm
+apt-get -y install nginx php5.6-cli
+apt-get -y install nginx php5.6-mysql
+apt-get -y install nginx php5.6-mcrypt
+sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/5.6/cli/php.ini
+
+# cari config php fpm dengan perintah berikut "php --ini |grep Loaded"
+sed -i 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/5.6/cli/php.ini
+
+# Cari config php fpm www.conf dengan perintah berikut "find / \( -iname "php.ini" -o -name "www.conf" \)"
+sed -i 's/listen = \/run\/php\/php5.6-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/5.6/fpm/pool.d/www.conf
+cd
+
+
+# Edit port apache2 ke 8090
+wget -O /etc/apache2/ports.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/apache2.conf"
+
+# Edit port virtualhost apache2 ke 8090
+wget -O /etc/apache2/sites-enabled/000-default.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/virtualhost.conf"
+
+# restart apache2
+/etc/init.d/apache2 restart
+
+
+apt install openvpn easy-rsa
+make-cadir /etc/openvpn/certs
+cd /etc/openvpn/certs/
+vim vars
+export KEY_SIZE=4096
+export KEY_COUNTRY="US"
+export KEY_PROVINCE="CA"
+export KEY_CITY="SanFrancisco"
+export KEY_ORG="Fort-Funston"
+export KEY_EMAIL=admin@myhost.mu"
+export KEY_OU="MyOrganizationalUnit"
+export KEY_NAME="VPNServer"
+source vars
+./clean-all
+./build-ca
+./build-key-server server
+openssl dhparam 4096 > /etc/openvpn/dh4096.pem
+openvpn --genkey --secret /etc/openvpn/certs/keys/ta.key
+adduser --system --shell /usr/sbin/nologin --no-create-home openvpn
+port 1194
+proto udp
+dev tun
+ca /etc/openvpn/certs/keys/ca.crt
+cert /etc/openvpn/certs/keys/server.crt
+key /etc/openvpn/certs/keys/server.key  # This file should be kept secret
+dh dh4096.pem
+server 10.10.0.0 255.255.255.0
+ifconfig-pool-persist ipp.txt
+push "route 10.8.0.0 255.255.255.0"
+push "route 192.168.99.0 255.255.255.0"
+push "route 192.168.10.0 255.255.255.0"
+push "redirect-gateway def1 bypass-dhcp"
+push "dhcp-option DNS 80.80.80.80"
+push "dhcp-option DNS 80.80.81.81"
+client-to-client
+keepalive 10 120
+tls-auth /etc/openvpn/certs/keys/ta.key 0 # This file is secret
+cipher AES-256-CBC
+user openvpn
+group nogroup
+persist-key
+persist-tun
+status openvpn-status.log
+log /var/log/openvpn.log
+verb 4
+explicit-exit-notify 1
+auth
+SHA512
+systemctl start openvpn
+systemctl start openvpn@server
+cd /etc/openvpn/certs
+source ./vars
+./build-key firstclient
+mkdir -p /etc/openvpn/clients/firstclient
+vim /etc/openvpn/clients/firstclient/firstclient.ovpn
+client
+dev tun
+proto udp
+remote 85.250.50.101 1194
+resolv-retry infinite
+nobind
+;user nobody
+;group nogroup
+persist-key
+persist-tun
+ca ca.crt
+cert firstclient.crt
+key firstclient.key
+remote-cert-tls server
+tls-auth ta.key 1
+cipher AES-256-CBC
+verb 3
+auth SHA512
+
+tls-cipher TLS-DHE-RSA-WITH-AES-256-GCM-SHA384:TLS-DHE-RSA-WITH-AES-128-GCM-SHA256:TLS-DHE-RSA-WITH-AES-256-CBC-SHA:TLS-DHE-RSA-WITH-CAMELLIA-256-CBC-SHA:TLS-DHE-RSA-WITH-AES-128
+-CBC-SHA:TLS-DHE-RSA-WITH-CAMELLIA-128-CBC-SHA
+cp /etc/openvpn/certs/keys/{ca.crt,firstclient.crt,firstclient.key,ta.key}  /etc/openvpn/clients/firstclient
+
+
+
+# iptables-persistent
+apt install iptables-persistent -y
+
+# firewall untuk memperbolehkan akses UDP dan akses jalur TCP
+
+iptables -F
+iptables -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -t nat -I POSTROUTING -s 10.5.0.0/24 -o eth0 -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 10.6.0.0/24 -o eth0 -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 10.7.0.0/24 -o eth0 -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+
+iptables -A INPUT -i eth0 -m state --state NEW -p tcp --dport 3306 -j ACCEPT
+iptables -A INPUT -i eth0 -m state --state NEW -p tcp --dport 7300 -j ACCEPT
+iptables -A INPUT -i eth0 -m state --state NEW -p udp --dport 7300 -j ACCEPT
+
+iptables -t nat -I POSTROUTING -s 10.5.0.0/24 -o ens3 -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 10.6.0.0/24 -o ens3 -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 10.7.0.0/24 -o ens3 -j MASQUERADE
+iptables -t nat -I POSTROUTING -s 10.8.0.0/24 -o ens3 -j MASQUERADE
+
+iptables-save > /etc/iptables/rules.v4
+chmod +x /etc/iptables/rules.v4
+
+# Reload IPTables
+iptables-restore -t < /etc/iptables/rules.v4
+netfilter-persistent save
+netfilter-persistent reload
+
+# Restart service openvpn
+systemctl enable openvpn
+systemctl start openvpn
+/etc/init.d/openvpn restart
+
+# set iptables tambahan
+iptables -F -t nat
+iptables -X -t nat
+iptables -A POSTROUTING -t nat -j MASQUERADE
+iptables-save > /etc/iptables-opvpn.conf
+
+# Restore iptables
+wget -O /etc/network/if-up.d/iptables "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/iptables-local"
+chmod +x /etc/network/if-up.d/iptables
+
+# Restore iptables rc.local
+# wget -O /etc/rc.local "https://raw.githubusercontent.com/whitevps2/sshtunnel/master/debian9/iptables-openvpn"
+# chmod +x /etc/rc.local
+
+# install squid3
+wget https://raw.githubusercontent.com/ndndndn/CodesX/main/sq3.sh && bash sq3.sh
+
+# download script
+cd /usr/bin
+wget -O menu "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/menu.sh"
+wget -O usernew "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/usernew.sh"
+wget -O trial "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/trial.sh"
+wget -O hapus "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/hapus.sh"
+wget -O cek "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/user-login.sh"
+wget -O member "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/user-list.sh"
+wget -O jurus69 "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/restart.sh"
+wget -O speedtest "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/speedtest_cli.py"
+wget -O info "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/info.sh"
+wget -O about "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/about.sh"
+wget -O delete "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/delete.sh"
+
+echo "0 0 * * * root /sbin/reboot" > /etc/cron.d/reboot
+
+chmod +x menu
+chmod +x usernew
+chmod +x trial
+chmod +x hapus
+chmod +x cek
+chmod +x member
+chmod +x jurus69
+chmod +x speedtest
+chmod +x info
+chmod +x about
+chmod +x delete
+
+# restart opevpn
+/etc/init.d/openvpn restart
+
+#auto delete
+wget -O /usr/local/bin/userdelexpired "https://www.dropbox.com/s/cwe64ztqk8w622u/userdelexpired?dl=1" && chmod +x /usr/local/bin/userdelexpired
+
+# Delete script
+rm -f /root/openvpn.sh
+
