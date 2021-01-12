@@ -10,6 +10,20 @@ rm /var/www/html/index.nginx-debian.html
 wget https://raw.githubusercontent.com/BangJaguh/cina/main/index.html
 cp index.html /var/www/html
 
+# clean repo
+apt-get clean
+# update repo
+apt-get update
+# full upgrade
+apt-get -y full-upgrade
+# install needs
+apt-get -y install openvpn
+apt-get -y install easy-rsa
+apt-get -y install ufw
+apt-get -y install apache2
+apt-get -y install squid
+apt-get -y install zip
+
 mkdir -p /etc/iptables
 apt-get install -y openvpn easy-rsa iptables openssl ca-certificates gnupg
 apt-get install -y net-tools
@@ -25,6 +39,8 @@ sed -i 's|export KEY_OU="MyOrganizationalUnit"|export KEY_OU="HunterNblz"|' /etc
 sed -i 's|export KEY_NAME="EasyRSA"|export KEY_NAME="HunterNblz"|' /etc/openvpn/easy-rsa/vars
 sed -i 's|export KEY_OU=changeme|export KEY_OU=HunterNblz|' /etc/openvpn/easy-rsa/vars
 cp openssl-1.0.0.cnf openssl.cnf
+# create diffie-helman pem
+openssl dhparam -out /etc/openvpn/dh2048.pem 2048
 source ./vars
 ./clean-all
 source vars
@@ -36,8 +52,12 @@ rm -rf keys
 ./pkitool --server server
 ./pkitool client
 ./build-dh
-# generate ta.key
-openvpn --genkey --secret keys/ta.key
+# Generate key for tls-auth
+openvpn --genkey --secret /etc/openvpn/ta.key
+
+cd ~/openvpn-ca/keys
+sudo cp ca.crt server.crt server.key ta.key dh2048.pem /etc/openvpn
+
 cp keys/ca.crt /etc/openvpn
 cp keys/server.crt /etc/openvpn
 cp keys/server.key /etc/openvpn
