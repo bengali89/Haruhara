@@ -72,7 +72,11 @@ unzip master.zip
 cd ddos-deflate-master
 ./install.sh
 cd
-service exim4 stop;sysv-rc-conf exim4 off;
+
+# disable exim
+service exim4 stop
+sysv-rc-conf exim4 off
+
 # webmin
 apt-get -y install webmin
 sed -i 's/ssl=1/ssl=0/g' /etc/webmin/miniserv.conf
@@ -201,7 +205,6 @@ service ssh restart
 service openvpn restart
 service dropbear restart
 service nginx restart
-service webmin restart
 service squid restart
 service php7.0-fpm restart
 service fail2ban restart
@@ -233,7 +236,6 @@ chown -R www-data:www-data /home/vps/public_html
 /etc/init.d/ssh restart
 /etc/init.d/dropbear restart
 /etc/init.d/fail2ban restart
-/etc/init.d/webmin restart
 /etc/init.d/stunnel4 restart
 /etc/init.d/php7.0-fpm restart
 /etc/init.d/squid start
