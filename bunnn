@@ -27,17 +27,17 @@ apt-get -y install zip
 mkdir -p /etc/iptables
 apt-get install -y openvpn easy-rsa iptables openssl ca-certificates gnupg
 apt-get install -y net-tools
-cp -r /usr/share/easy-rsa /etc/openvpn
-cd /etc/openvpn
-cd easy-rsa
-sed -i 's|export KEY_COUNTRY="US"|export KEY_COUNTRY="ID"|' /etc/openvpn/easy-rsa/vars
-sed -i 's|export KEY_PROVINCE="CA"|export KEY_PROVINCE="ID"|' /etc/openvpn/easy-rsa/vars
-sed -i 's|export KEY_CITY="SanFrancisco"|export KEY_CITY="ID"|' /etc/openvpn/easy-rsa/vars
-sed -i 's|export KEY_ORG="Fort-Funston"|export KEY_ORG="HunterNblz"|' /etc/openvpn/easy-rsa/vars
-sed -i 's|export KEY_EMAIL="me@myhost.mydomain"|export KEY_EMAIL="admin@nabil.my.id"|' /etc/openvpn/easy-rsa/vars
-sed -i 's|export KEY_OU="MyOrganizationalUnit"|export KEY_OU="HunterNblz"|' /etc/openvpn/easy-rsa/vars
-sed -i 's|export KEY_NAME="EasyRSA"|export KEY_NAME="HunterNblz"|' /etc/openvpn/easy-rsa/vars
-sed -i 's|export KEY_OU=changeme|export KEY_OU=HunterNblz|' /etc/openvpn/easy-rsa/vars
+cp -r /usr/share/easy-rsa/ /etc/openvpn
+mkdir /etc/openvpn/easy-rsa/keys
+sed -i 's|export KEY_COUNTRY="US"|export KEY_COUNTRY="PH"|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_PROVINCE="CA"|export KEY_PROVINCE="BTG"|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_CITY="SanFrancisco"|export KEY_CITY="Batangas City"|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_ORG="Fort-Funston"|export KEY_ORG="GROME"|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_EMAIL="me@myhost.mydomain"|export KEY_EMAIL=""|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_OU="MyOrganizationalUnit"|export KEY_OU="jeromelaliag"|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_NAME="EasyRSA"|export KEY_NAME="jeromelaliag"|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_OU=changeme|export KEY_OU=jeromelaliag|' /etc/openvpn/easy-rsa/vars
+sed -i 's|export KEY_SIZE=2048|export KEY_SIZE=1024|' /etc/openvpn/easy-rsa/vars
 cp openssl-1.0.0.cnf openssl.cnf
 # create diffie-helman pem
 openssl dhparam -out /etc/openvpn/dh2048.pem 2048
@@ -64,7 +64,7 @@ cp keys/server.key /etc/openvpn
 cp keys/dh2048.pem /etc/openvpn
 cp keys/client.key /etc/openvpn
 cp keys/client.crt /etc/openvpn
-cp keys/ta.key /etc/openvpn
+cp /etc/openvpn/ta.key /etc/openvpn/ta.key
 
 echo 'port 443
 proto tcp
