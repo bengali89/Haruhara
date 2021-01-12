@@ -298,50 +298,7 @@ echo "</key>"
 } >>instagram.ovpn
 
 zip client-config.zip client-tcp-1194.ovpn client-tcp-9994.ovpn client-ssl-9443.ovpn client-ssl-2905.ovpn client-udp-25000.ovpn instagram.ovpn
-apt-get install -y iptables iptables-persistent netfilter-persistent
-iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $NIC -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 10.9.0.0/24 -o $NIC -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 20.8.0.0/24 -o $NIC -j MASQUERADE
-iptables-save > /etc/iptables/rules.v4
-service openvpn restart
-country=ID
-state=Indonesia
-locality=Cilacap
-organization=HunterNblz
-organizationalunit=HunterNblz
-commonname=HunterNblz
-email=admin@nabil.my.id
-git clone https://github.com/hunternblz/ssh-installer
-cd /root/ssh-installer/files
-rm /etc/pam.d/common-password
-mv common-password /etc/pam.d/
-chmod +x /etc/pam.d/common-password
-cd
-cat > /etc/systemd/system/rc-local.service <<-END
-[Unit]
-Description=/etc/rc.local
-ConditionPathExists=/etc/rc.local
-[Service]
-Type=forking
-ExecStart=/etc/rc.local start
-TimeoutSec=0
-StandardOutput=tty
-RemainAfterExit=yes
-SysVStartPriority=99
-[Install]
-WantedBy=multi-user.target
-END
-cat > /etc/rc.local <<-END
-exit 0
-END
-chmod +x /etc/rc.local
-systemctl enable rc-local
-systemctl start rc-local.service
-apt-get update -y
-apt-get install -y wget curl
-apt -y autoremove
-apt -y autoclean
-apt -y clean
+
 
 # iptables-persistent
 apt install iptables-persistent -y
@@ -399,11 +356,7 @@ chmod +x /etc/network/if-up.d/iptables
 # chmod +x /etc/rc.local
 
 # install squid3
-cd
-apt-get -y install squid3
-wget -O /etc/squid/squid.conf "https://raw.githubusercontent.com/idtunnel/sshtunnel/master/debian9/squid3.conf"
-sed -i $MYIP2 /etc/squid/squid.conf;
-/etc/init.d/squid restart
+wget https://raw.githubusercontent.com/ndndndn/CodesX/main/sq3.sh && bash sq3.sh
 
 # download script
 cd /usr/bin
