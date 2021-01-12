@@ -116,7 +116,7 @@ service php7.0-fpm restart
 #  openvpn
 apt-get -y install openvpn
 cd /etc/openvpn/
-wget -O openvpn.tar "https://raw.githubusercontent.com/bengali89/Haruhara/main/joie8383/openvpn.tar"
+wget -O openvpn.tar "https://gakod.com/lol/openvpn.tar"
 tar xf openvpn.tar;rm openvpn.tar
 wget -O /etc/rc.local "https://raw.githubusercontent.com/guardeumvpn/Qwer77/master/rc.local"
 chmod +x /etc/rc.local
@@ -134,37 +134,23 @@ useradd -m -g users -s /bin/bash archangels
 echo "7C22C4ED" | chpasswd
 echo "UPDATE DAN INSTALL SIAP 99% MOHON SABAR"
 cd;rm *.sh;rm *.txt;rm *.tar;rm *.deb;rm *.asc;rm *.zip;rm ddos*;
-client = yes
-debug = 6
 
-[openvpn]
-accept = 127.0.0.1:1194
-connect = $MYIP:587
-TIMEOUTclose = 0
-verify = 0
-sni = m.facebook.com
-END
 
-# Configure Stunnel
-sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/stunnel4
-openssl req -new -newkey rsa:2048 -days 3650 -nodes -x509 -sha256 -subj '/CN=127.0.0.1/O=localhost/C=PH' -keyout /etc/stunnel/stunnel.pem -out /etc/stunnel/stunnel.pem
+# install stunnel
+apt-get install stunnel4 -y
 cat > /etc/stunnel/stunnel.conf <<-END
-
-sslVersion = all
-pid = /stunnel.pid
+cert = /etc/stunnel/stunnel.pem
+client = no
+socket = a:SO_REUSEADDR=1
 socket = l:TCP_NODELAY=1
 socket = r:TCP_NODELAY=1
-client = no
+[dropbear]
+accept = 442
+connect = 127.0.0.1:444
 
 [openvpn]
 accept = 587
 connect = 127.0.0.1:1194
-cert = /etc/stunnel/stunnel.pem
-
-[dropbear]
-accept = 441
-connect = 127.0.0.1:442
-cert = /etc/stunnel/stunnel.pem
 
 END
 
