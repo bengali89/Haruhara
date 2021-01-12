@@ -192,7 +192,7 @@ cat /etc/openvpn/server.key >> /etc/openvpn/client.ovpn
 echo '</key>' >> /etc/openvpn/client.ovpn
 echo '<tls-auth>' >> /etc/openvpn/client.ovpn
 cat /etc/openvpn/ta.key >> /etc/openvpn/client.ovpn
-echo '</tls-auth>' >> 
+echo '</tls-auth>' >> /etc/openvpn/client.ovpn
 cp client.ovpn /home/vps/public_html/
 
 wget -O /etc/openvpn/openvpnssl.ovpn "https://raw.githubusercontent.com/jm051484/Deb83in1Autoscript/master/openvpnssl.conf"
@@ -208,7 +208,6 @@ echo '</key>' >> /etc/openvpn/openvpnssl.ovpn
 echo '<tls-auth>' >> /etc/openvpn/openvpnssl.ovpn
 cat /etc/openvpn/ta.key >> /etc/openvpn/openvpnssl.ovpn
 echo '</tls-auth>' >> /etc/openvpn/openvpnssl.ovpn
-
 cp openvpnssl.ovpn /home/vps/public_html/
 
 # install badvpn
