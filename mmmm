@@ -45,7 +45,7 @@ cp keys/server.key /etc/openvpn
 cp keys/dh2048.pem /etc/openvpn
 cp keys/client.key /etc/openvpn
 cp keys/client.crt /etc/openvpn
-cp keys/ta.key /etc/openvpn/ta.key
+cp keys/ta.key /etc/openvpn
 
 echo 'port 443
 proto tcp
