@@ -37,14 +37,14 @@ rm -rf keys
 ./pkitool client
 ./build-dh
 # generate ta.key
-openvpn --genkey --secret keys/ta.key
+openvpn --genkey --secret etc/openvpn/ta.key
 cp keys/ca.crt /etc/openvpn
 cp keys/server.crt /etc/openvpn
 cp keys/server.key /etc/openvpn
 cp keys/dh2048.pem /etc/openvpn
 cp keys/client.key /etc/openvpn
 cp keys/client.crt /etc/openvpn
-cp keys/ta.key /etc/openvpn
+cp etc/openvpn/ta.key /etc/openvpn
 
 echo 'port 443
 proto tcp
