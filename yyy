@@ -826,9 +826,6 @@ auth $HMAC_ALG
 cipher $CIPHER
 ncp-ciphers $CIPHER
 tls-server
-plugin /etc/openvpn/openvpn-auth-pam.so /etc/pam.d/login
-verify-client-cert none
-username-as-common-name
 tls-version-min 1.2
 tls-cipher $CC_CIPHER
 status /var/log/openvpn/status.log
@@ -974,7 +971,6 @@ auth $HMAC_ALG
 auth-nocache
 cipher $CIPHER
 tls-client
-auth-user-pass
 tls-version-min 1.2
 tls-cipher $CC_CIPHER
 setenv opt block-outside-dns # Prevent Windows 10 DNS leak
