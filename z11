@@ -101,22 +101,24 @@ dh dh2048.pem
 cert server.crt
 key server.key
 # tls-auth ta.key 0
-plugin /usr/lib/openvpn/openvpn-plugin-auth-pam.so /etc/pam.d/login
-client-cert-not-required
+plugin /etc/openvpn/openvpn-auth-pam.so /etc/pam.d/login
+verify-client-cert none
 username-as-common-name
-server 192.168.100.0  255.255.255.0
+max-clients 4000
+topology subnet
+server 172.16.0.0 255.255.0.0
 push "redirect-gateway def1"
-push "dhcp-option DNS 8.8.8.8"
+keepalive 5 60
+status /etc/openvpn/tcp_stats.log
+log /etc/openvpn/tcp.log
+verb 2
+script-security 2
+socket-flags TCP_NODELAY
+push "socket-flags TCP_NODELAY"
+push "dhcp-option DNS 1.0.0.1"
+push "dhcp-option DNS 1.1.1.1"
 push "dhcp-option DNS 8.8.4.4"
-cipher none
-comp-lzo
-keepalive 5 30
-persist-key
-persist-tun
-client-to-client
-status log.log
-verb 3
-mute 10
+push "dhcp-option DNS 8.8.8.8"
 myOpenVPNconf1
 cat <<'myOpenVPNconf2' > /etc/openvpn/server_udp.conf
 # XAMScript
