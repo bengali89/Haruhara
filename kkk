@@ -25,6 +25,8 @@ sed -i 's|export KEY_OU="MyOrganizationalUnit"|export KEY_OU="HunterNblz"|' /etc
 sed -i 's|export KEY_NAME="EasyRSA"|export KEY_NAME="HunterNblz"|' /etc/openvpn/easy-rsa/vars
 sed -i 's|export KEY_OU=changeme|export KEY_OU=HunterNblz|' /etc/openvpn/easy-rsa/vars
 cp openssl-1.0.0.cnf openssl.cnf
+openssl dhparam -out keys/dh2048.pem 2048
+openvpn --genkey --secret /etc/openvpn/tls-auth.key
 source ./vars
 ./clean-all
 source vars
@@ -36,7 +38,6 @@ rm -rf keys
 ./pkitool --server server
 ./pkitool client
 ./build-dh
-openvpn --genkey --secret /etc/openvpn/tls-auth.key
 cp keys/ca.crt /etc/openvpn
 cp keys/server.crt /etc/openvpn
 cp keys/server.key /etc/openvpn
