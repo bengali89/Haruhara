@@ -236,9 +236,9 @@ echo "</cert>"
 echo "<key>"
 cat "/etc/openvpn/server.key"
 echo "</key>"
-echo "<tls-auth>" >> client.ovpn
-cat keys/ta.key >> client.ovpn
-echo "</tls-auth>" >> client.ovpn
+echo "<tls-auth>"
+cat "/keys/ta.key"
+echo "</tls-auth>"
 } >>client.ovpn
 
 {
