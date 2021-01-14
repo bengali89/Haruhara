@@ -184,7 +184,7 @@ sed -i 's|export KEY_OU="MyOrganizationalUnit"|export KEY_OU="Personal"|' /etc/o
 sed -i 's|export KEY_NAME="EasyRSA"|export KEY_NAME="RangersVPN"|' /etc/openvpn/easy-rsa/vars
 sed -i 's|export KEY_OU=changeme|export KEY_OU=Rangers|' /etc/openvpn/easy-rsa/vars
 # create diffie-helman pem
-openssl dhparam -out /etc/openvpn/dh1024.pem 1024
+openssl dhparam -out /etc/openvpn/dh2048.pem 2048
 # Create PKI
 cd /etc/openvpn/easy-rsa
 cp openssl-1.0.0.cnf openssl.cnf
@@ -205,18 +205,17 @@ export EASY_RSA="${EASY_RSA:-.}"
 openvpn --genkey --secret /etc/openvpn/tls-auth.key
 
 cd ~/openvpn-ca/keys
-sudo cp ca.crt server.crt server.key tls-auth.key dh1024.pem /etc/openvpn
+sudo cp ca.crt server.crt server.key tls-auth.key dh2048.pem /etc/openvpn
 
 # copy /etc/openvpn/easy-rsa/keys/{server.crt,server.key,ca.crt} /etc/openvpn
 cp /etc/openvpn/easy-rsa/keys/server.crt /etc/openvpn/server.crt
 cp /etc/openvpn/easy-rsa/keys/server.key /etc/openvpn/server.key
 cp /etc/openvpn/easy-rsa/keys/ca.crt /etc/openvpn/ca.crt
-cp /etc/openvpn/dh1024.pem /etc/openvpn/dh1024.pem
 cp /etc/openvpn/tls-auth.key /etc/openvpn/tls-auth.key
 
 # server settings
 cd /etc/openvpn/
-wget -O /etc/openvpn/server.conf "https://raw.githubusercontent.com/bengali89/Haruhara/main/Ggshd/server.conf"
+wget -O /etc/openvpn/server.conf "https://raw.githubusercontent.com/bengali89/Haruhara/main/Jsbsbbs/server.conf"
 systemctl start openvpn@server
 sysctl -w net.ipv4.ip_forward=1
 sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g' /etc/sysctl.conf
