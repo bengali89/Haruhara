@@ -24,10 +24,10 @@ newclient() {
 `cat /etc/openvpn/ca.crt`
 </ca>
 <cert>
-`cat /etc/openvpn/easy-rsa/pki/issued/$CLIENT.crt`
+`cat /etc/openvpn/easy-rsa/pki/issued/server.crt`
 </cert>
 <key>
-`cat /etc/openvpn/easy-rsa/pki/private/$CLIENT.key`
+`cat /etc/openvpn/easy-rsa/pki/private/server.key`
 </key>
 <tls-auth>
 `cat /etc/openvpn/tls-auth.key`
@@ -93,14 +93,11 @@ proto tcp
 dev tun
 crl-verify crl.pem
 ca ca.crt
-cert '$SERVER_NAME'.crt
-key '$SERVER_NAME'.key
+cert server.crt
+key server.key
 tls-auth tls-auth.key 0
 dh dh.pem
 topology subnet
-plugin /etc/openvpn/openvpn-auth-pam.so /etc/pam.d/login
-verify-client-cert none
-username-as-common-name
 server 10.10.0.0 255.255.255.0
 push "dhcp-option DNS 67.207.67.2"
 push "dhcp-option DNS 67.207.67.3"
