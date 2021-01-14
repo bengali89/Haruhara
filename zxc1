@@ -630,6 +630,7 @@ ca ca.crt
 cert server.crt
 key server.key
 dh dh.pem
+plugin /usr/lib/openvpn/openvpn-plugin-auth-pam.so login
 client-cert-not-required
 username-as-common-name
 push \"register-dns\"
