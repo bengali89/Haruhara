@@ -427,7 +427,6 @@ fi
  # Pulling OpenVPN no internet fixer script
  #wget -qO /etc/openvpn/openvpn.bash "https://raw.githubusercontent.com/Bonveio/BonvScripts/master/openvpn.bash"
  #0chmod +x /etc/openvpn/openvpn.bash
-}
 
  # I'm setting Some Squid workarounds to prevent Privoxy's overflowing file descriptors that causing 50X error when clients trying to connect to your proxy server(thanks for this trick @homer_simpsons)
  apt remove --purge squid -y
