@@ -106,9 +106,8 @@ openvpn --genkey --secret keys/ta.key
 cd ~/openvpn-ca/keys
 sudo cp ca.crt ca.key server.crt server.key ta.key dh2048.pem /etc/openvpn
 
-# Sample config:
-# gunzip -c /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz | sudo tee /etc/openvpn/server.conf
-cat <<EOT | sudo tee /etc/openvpn/server.conf
+# Buat config server TCP 1194
+cat > /etc/openvpn/server-tcp-1194.conf <<-END
 port 443
 proto tcp
 dev tun
@@ -116,24 +115,22 @@ ca ca.crt
 cert server.crt
 key server.key  # This file should be kept secret
 dh dh2048.pem
-server 10.8.0.0 255.255.255.0
-ifconfig-pool-persist ipp.txt
-push "redirect-gateway def1 bypass-dhcp"
-push "dhcp-option DNS 208.67.222.222"
-push "dhcp-option DNS 208.67.220.220"
-keepalive 10 120
 tls-auth ta.key 0 # This file is secret
-key-direction 0
-cipher AES-128-CBC   # AES
-auth SHA256
+plugin /usr/lib/openvpn/openvpn-plugin-auth-pam.so login
+client-cert-not-required
+username-as-common-name
+server 10.6.0.0 255.255.255.0
+ifconfig-pool-persist ipp.txt
+push "redirect-gateway def1"
+push "dhcp-option DNS 8.8.8.8"
+push "dhcp-option DNS 8.8.4.4"
+keepalive 5 30
 comp-lzo
-user nobody
-group nogroup
 persist-key
 persist-tun
-status openvpn-status.log
+status server-tcp-1194.log
 verb 3
-EOT
+END
 
 # Enable IP forwarding
 sudo sed -i '/^#.*net.ipv4.ip_forward/s/^#//' /etc/sysctl.conf
@@ -177,14 +174,18 @@ cat > /etc/openvpn/client-tcp-1194.ovpn <<-END
 client
 dev tun
 proto tcp
-remote xxxxxxxxx 1194
+remote xxxxxxxxx 443
+http-proxy xxxxxxxxx 8080
 resolv-retry infinite
-route-method exe
 nobind
+remote-cert-tls server
+cipher AES-128-CBC
+auth SHA256
+auth-user-pass
+key-direction 1
+comp-lzo
 persist-key
 persist-tun
-auth-user-pass
-comp-lzo
 verb 3
 END
 
@@ -193,6 +194,17 @@ client TCP 1194
 echo '<ca>' >> /etc/openvpn/client-tcp-1194.ovpn
 cat /etc/openvpn/ca.crt >> /etc/openvpn/client-tcp-1194.ovpn
 echo '</ca>' >> /etc/openvpn/client-tcp-1194.ovpn
+echo '<cert>' >> /etc/openvpn/client-tcp-1194.ovpn
+cat /etc/openvpn/server.crt >> /etc/openvpn/client-tcp-1194.ovpn
+echo '</cert>' >> /etc/openvpn/client-tcp-1194.ovpn
+echo '<key>' >> /etc/openvpn/client-tcp-1194.ovpn
+cat /etc/openvpn/server.key >> /etc/openvpn/client-tcp-1194.ovpn
+echo '</key>' >> /etc/openvpn/client-tcp-1194.ovpn
+echo '<tls-auth>' >> /etc/openvpn/client-tcp-1194.ovpn
+cat /etc/openvpn/ta.key >> /etc/openvpn/client-tcp-1194.ovpn
+echo '</tls-auth>' >> /etc/openvpn/client-tcp-1194.ovpn
+
+
 cp /etc/openvpn/client-tcp-1194.ovpn /home/vps/public_html/client-tcp-1194.ovpn
 
 # iptables-persistent
