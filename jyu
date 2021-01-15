@@ -1,0 +1,22 @@
+apt-get update && apt-get upgrade
+echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+apt-get install openvpn
+apt-get install curl
+apt-get install apache2
+rm /var/www/html/index.html
+rm /var/www/html/index.nginx-debian.html
+wget https://raw.githubusercontent.com/BangJaguh/cina/main/index.html
+cp index.html /var/www/html
+# Instalar openvpn
+apt-get -y install openvpn && wget --no-check-certificate -O /etc/openvpn/openvpn.tar "https://raw.githubusercontent.com/llbranco/vpsautoinstall_debian/master/openvpn-ubuntu.tar" && cd /etc/openvpn/ && tar xf openvpn.tar && service openvpn restart && wget -O /var/www/html/tcp.ovpn "https://raw.githubusercontent.com/llbranco/vpsautoinstall_debian/master/cliente.conf" && sed -i $MYIP2 /var/www/html/tcp.ovpn && cd
+wget -O /var/www/html/tcp.ovpn "https://raw.githubusercontent.com/llbranco/vpsautoinstall_debian/master/cliente.conf"
+sed -i $MYIP2 /var/www/html/tcp.ovpn;
+sudo systemctl start openvpn@server
+service openvpn restart
+wget https://raw.githubusercontent.com/jm051484/AutoPrivoxy/master/AutoPrivoxy.sh && bash AutoPrivoxy.sh
+cd /usr/bin
+wget -O add-user "https://raw.githubusercontent.com/BangJaguh/cina/main/add-user.sh"
+echo "0 0 * * * root /sbin/reboot" > /etc/cron.d/reboot
+chmod +x add-user
+clear
+echo DONE INSTALL
