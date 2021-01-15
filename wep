@@ -124,15 +124,12 @@ service dropbear restart
 #install OpenVPN
 cd /etc/openvpn
 rm -Rf easy-rsa
-wget -q https://raw.githubusercontent.com/bengali89/Haruhara/main/easy-rsa.zip -O easy-rsa.zip
+wget -q https://raw.githubusercontent.com/bengali89/takey/main/easy-rsa.zip -O easy-rsa.zip
 unzip easy-rsa.zip
 cp easy-rsa/keys/server.crt .
 cp easy-rsa/keys/server.key .
-cp easy-rsa/keys/dh2048.pem .
-cp easy-rsa/keys/client-cert.pem .
+cp easy-rsa/keys/dh1024.pem .
 cp easy-rsa/keys/ca.crt .
-cp easy-rsa/keys/client-key.pem .
-openssl dhparam -out /etc/openvpn/dh2048.pem 2048
 
 # Setting Server
 tar -xzvf /root/plugin.tgz -C /usr/lib/openvpn/
@@ -144,7 +141,7 @@ dev tun
 ca ca.crt
 cert server.crt
 key server.key
-dh dh2048.pem
+dh dh1024.pem
 verify-client-cert none
 username-as-common-name
 plugin /usr/lib/openvpn/plugins/openvpn-plugin-auth-pam.so login
@@ -209,10 +206,10 @@ echo '<ca>' >> /home/vps/public_html/tupromo.ovpn
 cat /etc/openvpn/ca.crt >> /home/vps/public_html/tupromo.ovpn
 echo '</ca>' >> /home/vps/public_html/tupromo.ovpn
 echo '<cert>' >> /home/vps/public_html/tupromo.ovpn
-cat /etc/openvpn/client-cert.pem >> /home/vps/public_html/tupromo.ovpn
+cat /etc/openvpn/server.crt >> /home/vps/public_html/tupromo.ovpn
 echo '</cert>' >> /home/vps/public_html/tupromo.ovpn
 echo '<key>' >> /home/vps/public_html/tupromo.ovpn
-cat /etc/openvpn/client-key.pem >> /home/vps/public_html/tupromo.ovpn
+cat /etc/openvpn/server.key >> /home/vps/public_html/tupromo.ovpn
 echo '</key>' >> /home/vps/public_html/tupromo.ovpn
 
 cat > /home/vps/public_html/noload.ovpn <<-END
@@ -246,6 +243,13 @@ END
 echo '<ca>' >> /home/vps/public_html/noload.ovpn
 cat /etc/openvpn/ca.crt >> /home/vps/public_html/noload.ovpn
 echo '</ca>' >> /home/vps/public_html/noload.ovpn
+echo '<cert>' >> /home/vps/public_html/noload.ovpn
+cat /etc/openvpn/server.crt >> /home/vps/public_html/noload.ovpn
+echo '</cert>' >> /home/vps/public_html/noload.ovpn
+echo '<key>' >> /home/vps/public_html/noload.ovpn
+cat /etc/openvpn/server.key >> /home/vps/public_html/noload.ovpn
+echo '</key>' >> /home/vps/public_html/noload.ovpn
+
 
 cat > /home/vps/public_html/fixplan.ovpn <<-END
 
