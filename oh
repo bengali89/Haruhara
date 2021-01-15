@@ -1,0 +1,140 @@
+#!/bin/bash
+##
+## ArtificialVPN Server Configuration
+## by M4rshall
+##
+## Copyright (c) ArtificialVPN 2018. All Rights Reserved
+##
+
+
+
+## Check if VPS have root access
+if [[ "$EUID" -ne 0 ]]; then
+	echo "Sorry, you need to run this as root"
+	exit
+fi
+
+## Check if TUN Device is available
+if [[ ! -e /dev/net/tun ]]; then
+	echo "The TUN device is not available
+You need to enable TUN before running this script"
+	exit
+fi
+
+## Check if VPS have Debian OS
+if [[ -e /etc/debian_version ]]; then
+	OS=debian
+	GROUPNAME=nogroup
+	RCLOCAL='/etc/rc.local'
+else
+	echo "Looks like you aren't running this installer on Debian, Ubuntu or CentOS"
+	exit
+fi
+
+## GET REAL IP
+if [[ "$PUBLICIP" != "" ]]; then
+	IP=$PUBLICIP
+fi
+
+## Updating System and Installing OpenVPN and other Application
+apt-get update
+apt-get install openvpn ufw squid3 p7zip-full apache2 -y
+
+#Setting UFW
+ufw allow ssh
+ufw allow 443/tcp
+sed -i 's|DEFAULT_INPUT_POLICY="DROP"|DEFAULT_INPUT_POLICY="ACCEPT"|' /etc/default/ufw
+sed -i 's|DEFAULT_FORWARD_POLICY="DROP"|DEFAULT_FORWARD_POLICY="ACCEPT"|' /etc/default/ufw
+
+# set ipv4 forward
+echo 1 > /proc/sys/net/ipv4/ip_forward
+sed -i 's|#net.ipv4.ip_forward=1|net.ipv4.ip_forward=1|' /etc/sysctl.conf
+
+#Setting IPtables
+cat > /etc/iptables.up.rules <<-END
+*nat
+:PREROUTING ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+-A POSTROUTING -j SNAT --to-source xxxxxxxxx
+-A POSTROUTING -o eth0 -j MASQUERADE
+-A POSTROUTING -s 192.168.10.0/24 -o eth0 -j MASQUERADE
+COMMIT
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:fail2ban-ssh - [0:0]
+-A INPUT -p tcp -m multiport --dports 22 -j fail2ban-ssh
+-A INPUT -p ICMP --icmp-type 8 -j ACCEPT
+-A INPUT -p tcp -m tcp --dport 53 -j ACCEPT
+-A INPUT -p tcp --dport 22  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 80  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 143  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 442  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 443  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 587  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 1147  -m state --state NEW -j ACCEPT
+-A INPUT -p udp --dport 1147  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 3128  -m state --state NEW -j ACCEPT
+-A INPUT -p udp --dport 3128  -m state --state NEW -j ACCEPT
+-A INPUT -p tcp --dport 8080  -m state --state NEW -j ACCEPT
+-A INPUT -p udp --dport 8080  -m state --state NEW -j ACCEPT 
+-A INPUT -p tcp --dport 10000  -m state --state NEW -j ACCEPT
+-A fail2ban-ssh -j RETURN
+COMMIT
+*raw
+:PREROUTING ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+COMMIT
+*mangle
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+COMMIT
+END
+sed -i $MYIP2 /etc/iptables.up.rules;
+iptables-restore < /etc/iptables.up.rules
+
+
+## Downloading Keys and Config for OpenVPN Server
+cd ~/
+rm *
+wget https://www.dropbox.com/s/p94a7aedlpt71ko/keys.zip?dl=0
+mv keys.zip?dl=0 keys.zip
+7za x -P20m4rshall18 keys.zip
+rm keys.zip
+mkdir /etc/openvpn/keys
+wget -O /etc/openvpn/server.conf https://raw.githubusercontent.com/m4rshall-dev/ovpn-files/master/server.conf
+mv * /etc/openvpn/keys/
+
+## Download Script
+cd /etc/openvpn
+mkdir script
+touch /etc/openvpn/script/login.sh
+wget -O /etc/openvpn/script/login.sh https://raw.githubusercontent.com/m4rshall-dev/ovpn-files/master/login.sh
+touch /var/www/html/m4rshall.txt
+chmod 755 /var/www/html/m4rshall.txt
+chmod 755 /etc/openvpn/*
+chmod 755 /etc/openvpn/script/login.sh
+
+cd ~
+wget https://raw.githubusercontent.com/m4rshall-dev/ovpn-files/master/test.sh
+chmod 755 ~/test.sh
+
+crontab -l > mycron
+echo "* * * * * ~/test.sh" >> mycron
+crontab mycron
+rm mycron
+
+wget https://raw.githubusercontent.com/m4rshall-dev/ovpn-files/master/install2.sh
+chmod +x install2.sh | bash install2.sh
+
+## Start OpenVPN Service
+service openvpn restart
+echo ""
+echo "Status:"
+service openvpn status
+service squid3 status
