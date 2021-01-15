@@ -128,7 +128,7 @@ wget -q https://raw.githubusercontent.com/bengali89/Haruhara/main/easy-rsa.zip -
 unzip easy-rsa.zip
 cp easy-rsa/keys/server.crt .
 cp easy-rsa/keys/server.key .
-
+cp easy-rsa/keys/dh2048.pem .
 cp easy-rsa/keys/client-cert.pem .
 cp easy-rsa/keys/ca.crt .
 cp easy-rsa/keys/client-key.pem .
