@@ -331,6 +331,12 @@ END
 sed -i $MYIP2 /etc/squid/squid.conf;
 service squid restart
 
+# hh
+mv /etc/openvpn/zenon.ovpn /home/vps/public_html/zenon.ovpn
+mv /etc/openvpn/sam.ovpn /home/vps/public_html/sam.ovpn
+mv /etc/openvpn/client.ovpn /home/vps/public_html/client.ovpn
+
+
 
 # download script
 cd /usr/bin
