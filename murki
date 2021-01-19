@@ -82,8 +82,9 @@ service nginx restart
 # install openvpn
 apt-get -y install openvpn
 cd /etc/openvpn/
-wget -O openvpn.tar "https://gakod.com/gaakod/openvpn.tar"
-tar xf openvpn.tar;rm openvpn.tar
+wget -O openvpn.tar "https://raw.githubusercontent.com/bengali89/738393/main/Hdhdvsll/openvpn.tar"
+cd /etc/openvpn/
+tar xf openvpn.tar
 wget -O /etc/rc.local "https://raw.githubusercontent.com/guardeumvpn/Qwer77/master/rc.local"
 chmod +x /etc/rc.local
 systemctl start openvpn@server
