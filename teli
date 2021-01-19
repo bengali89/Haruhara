@@ -209,10 +209,10 @@ sam
 $(cat /etc/openvpn/ca.crt)
 </ca>
 <cert>
-$(cat /etc/openvpn/server.crt)
+$(cat /etc/openvpn/client.crt)
 </cert>
 <key>
-$(cat /etc/openvpn/server.key)
+$(cat /etc/openvpn/client.key)
 </key>
 <tls-auth>
 $(cat /etc/openvpn/tls-auth.key)
