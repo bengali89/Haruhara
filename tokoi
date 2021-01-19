@@ -144,6 +144,7 @@ ca easy-rsa/keys/ca.crt
 cert easy-rsa/keys/white-vps.crt
 key easy-rsa/keys/white-vps.key
 dh dh2048.pem
+tls-auth ta.key 0
 plugin /usr/lib/openvpn/openvpn-plugin-auth-pam.so login
 client-cert-not-required
 username-as-common-name
