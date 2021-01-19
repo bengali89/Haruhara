@@ -81,9 +81,9 @@ service nginx restart
 
 # install openvpn
 apt-get -y install openvpn
-wget -O /etc/openvpn/openvpn.tar "https://gakod.com/AUTOVPS/openvpn.tar"
 cd /etc/openvpn/
-tar xf openvpn.tar
+wget -O openvpn.tar "https://gakod.com/gaakod/openvpn.tar"
+tar xf openvpn.tar;rm openvpn.tar
 wget -O /etc/rc.local "https://raw.githubusercontent.com/guardeumvpn/Qwer77/master/rc.local"
 chmod +x /etc/rc.local
 systemctl start openvpn@server
@@ -94,7 +94,7 @@ cat > /etc/openvpn/zenon.ovpn <<EOF1
 # By: Gakod
 client
 dev tun
-remote $MYIP 443
+remote $MYIP 443 tcp
 http-proxy-retry
 http-proxy $MYIP 8080
 resolv-retry infinite
